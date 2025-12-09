@@ -3,17 +3,18 @@ import type { NextRequest } from "next/server"
 
 // Routes that don't require authentication
 const publicRoutes = [
-  "/auth/login",
-  "/auth/register",
-  "/auth/forgot-password",
-  "/auth/reset-password",
-  "/auth/verify-email",
+  "/login",
+  "/register",
+  "/forgot-password",
+  "/reset-password",
+  "/verify-email",
 ]
 
 // Routes that require authentication
 const protectedRoutes = ["/dashboard", "/users", "/roles", "/profile", "/settings"]
 
-export function middleware(request: NextRequest) {
+// Changed from 'middleware' to 'proxy'
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Allow public routes

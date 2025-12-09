@@ -14,7 +14,7 @@ import { EmptyState } from "@/components/common/empty-state"
 import { LoadingSpinner } from "@/components/common/loading-spinner"
 import { PermissionGate } from "@/components/common/permission-gate"
 import type { User } from "@/types"
-import { deleteUser } from "@/lib/api/users"
+import { deleteUser, getUsers } from "@/lib/api/users"
 
 // Mock users for demo (in production, this would come from the API)
 const mockUsers: User[] = [
@@ -106,10 +106,8 @@ export default function UsersPage() {
   const loadUsers = useCallback(async () => {
     setIsLoading(true)
     try {
-      // In production, use: const data = await getUsers();
-      // For demo, use mock data
-      await new Promise((resolve) => setTimeout(resolve, 500))
-      setUsers(mockUsers)
+      const response = await getUsers()
+      setUsers(response.content)
     } catch {
       toast.error("Failed to load users")
     } finally {

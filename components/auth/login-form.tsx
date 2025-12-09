@@ -97,7 +97,7 @@ export function LoginForm() {
 
       <p className="text-center text-sm text-muted-foreground">
         {"Don't have an account? "}
-        <Link href="/auth/register" className="text-primary hover:underline">
+        <Link href="/register" className="text-primary hover:underline">
           Sign up
         </Link>
       </p>
