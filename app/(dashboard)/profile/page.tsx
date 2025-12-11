@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
 import { Eye, EyeOff, User, Mail, Shield, Key, Calendar, Clock, MailCheck } from "lucide-react"
+import { z } from "zod"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -18,9 +19,34 @@ import { RoleBadge } from "@/components/common/role-badge"
 import { LoadingSpinner } from "@/components/common/loading-spinner"
 import { useAuthStore } from "@/lib/store/auth-store"
 import { updateUserSchema, type UpdateUserFormData } from "@/lib/validations/users"
-import { resetPasswordSchema, type ResetPasswordFormData } from "@/lib/validations/auth"
 import { getInitials, formatDateTime, formatRelativeTime } from "@/lib/utils/formatters"
 import { updateUser } from "@/lib/api/users"
+import { changePassword } from "@/lib/api/password"
+
+// Password change schema with current password
+const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, "Current password is required"),
+    newPassword: z
+      .string()
+      .min(8, "Password must be at least 8 characters")
+      .max(100, "Password must not exceed 100 characters")
+      .regex(
+        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
+        "Password must contain at least one uppercase letter, one lowercase letter, and one number"
+      ),
+    confirmPassword: z.string().min(1, "Please confirm your password"),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
+  })
+  .refine((data) => data.currentPassword !== data.newPassword, {
+    message: "New password must be different from current password",
+    path: ["newPassword"],
+  })
+
+type ChangePasswordFormData = z.infer<typeof changePasswordSchema>
 
 export default function ProfilePage() {
   const user = useAuthStore((state) => state.user)
@@ -41,9 +67,10 @@ export default function ProfilePage() {
     },
   })
 
-  const passwordForm = useForm<ResetPasswordFormData>({
-    resolver: zodResolver(resetPasswordSchema),
+  const passwordForm = useForm<ChangePasswordFormData>({
+    resolver: zodResolver(changePasswordSchema),
     defaultValues: {
+      currentPassword: "",
       newPassword: "",
       confirmPassword: "",
     },
@@ -68,15 +95,24 @@ export default function ProfilePage() {
     }
   }
 
-  const handlePasswordUpdate = async (data: ResetPasswordFormData) => {
+  const handlePasswordUpdate = async (data: ChangePasswordFormData) => {
     setIsUpdatingPassword(true)
     try {
-      // In production, call password change API
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-      toast.success("Password updated successfully")
-      passwordForm.reset()
-    } catch {
-      toast.error("Failed to update password")
+      const response = await changePassword(data.currentPassword, data.newPassword)
+      
+      if (response.success) {
+        toast.success("Password updated successfully")
+        passwordForm.reset()
+        // Reset visibility states
+        setShowCurrentPassword(false)
+        setShowNewPassword(false)
+        setShowConfirmPassword(false)
+      } else {
+        toast.error(response.message || "Failed to update password")
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to update password"
+      toast.error(message)
     } finally {
       setIsUpdatingPassword(false)
     }
@@ -225,6 +261,7 @@ export default function ProfilePage() {
                         id="currentPassword"
                         type={showCurrentPassword ? "text" : "password"}
                         placeholder="Enter current password"
+                        {...passwordForm.register("currentPassword")}
                       />
                       <Button
                         type="button"
@@ -240,6 +277,11 @@ export default function ProfilePage() {
                         )}
                       </Button>
                     </div>
+                    {passwordForm.formState.errors.currentPassword && (
+                      <p className="text-sm text-destructive">
+                        {passwordForm.formState.errors.currentPassword.message}
+                      </p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -268,6 +310,9 @@ export default function ProfilePage() {
                     {passwordForm.formState.errors.newPassword && (
                       <p className="text-sm text-destructive">{passwordForm.formState.errors.newPassword.message}</p>
                     )}
+                    <p className="text-xs text-muted-foreground">
+                      Must be at least 8 characters with uppercase, lowercase, and number
+                    </p>
                   </div>
 
                   <div className="space-y-2">

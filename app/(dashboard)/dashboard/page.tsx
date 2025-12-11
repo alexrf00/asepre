@@ -1,6 +1,7 @@
 "use client"
 
-import { Users, Shield, UserCheck, Activity } from "lucide-react"
+import { useEffect, useState, useCallback } from "react"
+import { Users, Shield, UserCheck, Activity, Loader2, AlertCircle, RefreshCw } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { StatsCard } from "@/components/dashboard/stats-card"
 import { ActivityItem } from "@/components/dashboard/activity-item"
@@ -9,52 +10,78 @@ import { RoleBadge } from "@/components/common/role-badge"
 import { PermissionGate } from "@/components/common/permission-gate"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-
-// Mock data for demo
-const mockStats = {
-  totalUsers: 1247,
-  activeUsers: 892,
-  totalRoles: 4,
-  pendingVerifications: 23,
-}
-
-const mockActivity = [
-  {
-    id: 1,
-    user: { firstName: "John", lastName: "Doe" },
-    action: "created a new user",
-    target: "jane.smith@example.com",
-    role: "ADMINISTRADOR_GENERAL",
-    timestamp: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
-  },
-  {
-    id: 2,
-    user: { firstName: "Alice", lastName: "Johnson" },
-    action: "assigned role",
-    target: "USER_ADMIN",
-    role: "SUPERADMIN",
-    timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-  },
-  {
-    id: 3,
-    user: { firstName: "Bob", lastName: "Williams" },
-    action: "updated permissions for",
-    target: "VIEWER role",
-    role: "ADMINISTRADOR_GENERAL",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-  },
-  {
-    id: 4,
-    user: { firstName: "Emma", lastName: "Brown" },
-    action: "deleted user",
-    target: "old.user@example.com",
-    role: "USER_ADMIN",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(),
-  },
-]
+import {
+  getDashboardSummary,
+  type DashboardStats,
+  type ActivityItem as ActivityItemType,
+} from "@/lib/api/dashboard"
 
 export default function DashboardPage() {
   const user = useAuthStore((state) => state.user)
+  const [stats, setStats] = useState<DashboardStats | null>(null)
+  const [activity, setActivity] = useState<ActivityItemType[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [refreshing, setRefreshing] = useState(false)
+
+  const fetchDashboardData = useCallback(async (isRefresh: boolean = false) => {
+    try {
+      if (isRefresh) {
+        setRefreshing(true)
+      } else {
+        setLoading(true)
+      }
+      setError(null)
+
+      const { stats, recentActivity } = await getDashboardSummary(10)
+      setStats(stats)
+      setActivity(recentActivity)
+    } catch (err) {
+      console.error("Failed to fetch dashboard data:", err)
+      setError("Failed to load dashboard data. Please try again.")
+    } finally {
+      setLoading(false)
+      setRefreshing(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchDashboardData()
+  }, [fetchDashboardData])
+
+  // Auto-refresh every 5 minutes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchDashboardData(true)
+    }, 5 * 60 * 1000)
+
+    return () => clearInterval(interval)
+  }, [fetchDashboardData])
+
+  if (loading) {
+    return (
+      <div className="flex h-[50vh] items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <p className="text-muted-foreground">Loading dashboard...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex h-[50vh] items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <AlertCircle className="h-8 w-8 text-destructive" />
+          <p className="text-destructive">{error}</p>
+          <Button onClick={() => fetchDashboardData()} variant="outline">
+            Try Again
+          </Button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -64,10 +91,21 @@ export default function DashboardPage() {
           <h1 className="text-3xl font-bold tracking-tight">Welcome back, {user?.firstName}!</h1>
           <p className="text-muted-foreground">{"Here's what's happening with your RBAC system today."}</p>
         </div>
-        <div className="flex gap-2">
-          {user?.roles.map((role) => (
-            <RoleBadge key={role} role={role} />
-          ))}
+        <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => fetchDashboardData(true)}
+            disabled={refreshing}
+            title="Refresh dashboard"
+          >
+            <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+          </Button>
+          <div className="flex gap-2">
+            {user?.roles.map((role) => (
+              <RoleBadge key={role} role={role} />
+            ))}
+          </div>
         </div>
       </div>
 
@@ -75,29 +113,50 @@ export default function DashboardPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatsCard
           title="Total Users"
-          value={mockStats.totalUsers.toLocaleString()}
+          value={stats?.totalUsers?.toLocaleString() ?? "0"}
           icon={Users}
-          trend={{ value: 12, isPositive: true }}
+          trend={
+            stats?.usersTrend
+              ? {
+                  value: stats.usersTrend.value,
+                  isPositive: stats.usersTrend.isPositive,
+                }
+              : undefined
+          }
           description="from last month"
         />
         <StatsCard
           title="Active Users"
-          value={mockStats.activeUsers.toLocaleString()}
+          value={stats?.activeUsers?.toLocaleString() ?? "0"}
           icon={UserCheck}
-          trend={{ value: 8, isPositive: true }}
+          trend={
+            stats?.activeUsersTrend
+              ? {
+                  value: stats.activeUsersTrend.value,
+                  isPositive: stats.activeUsersTrend.isPositive,
+                }
+              : undefined
+          }
           description="currently online"
         />
         <StatsCard
           title="Total Roles"
-          value={mockStats.totalRoles}
+          value={stats?.totalRoles?.toString() ?? "0"}
           icon={Shield}
           description="system roles configured"
         />
         <StatsCard
           title="Pending Verifications"
-          value={mockStats.pendingVerifications}
+          value={stats?.pendingVerifications?.toString() ?? "0"}
           icon={Activity}
-          trend={{ value: 5, isPositive: false }}
+          trend={
+            stats?.verificationsTrend && stats.pendingVerifications > 0
+              ? {
+                  value: stats.verificationsTrend.value,
+                  isPositive: false,
+                }
+              : undefined
+          }
           description="awaiting email verification"
         />
       </div>
@@ -149,18 +208,24 @@ export default function DashboardPage() {
             <CardDescription>Latest actions in the system</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="divide-y divide-border">
-              {mockActivity.map((activity) => (
-                <ActivityItem
-                  key={activity.id}
-                  user={activity.user}
-                  action={activity.action}
-                  target={activity.target}
-                  role={activity.role}
-                  timestamp={activity.timestamp}
-                />
-              ))}
-            </div>
+            {activity.length > 0 ? (
+              <div className="divide-y divide-border">
+                {activity.map((item) => (
+                  <ActivityItem
+                    key={item.id}
+                    user={item.user}
+                    action={item.action}
+                    target={item.target}
+                    role={item.role}
+                    timestamp={item.timestamp}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="flex h-32 items-center justify-center text-muted-foreground">
+                No recent activity
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
