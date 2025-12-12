@@ -112,7 +112,7 @@ export function ResetPasswordForm() {
             Your password has been successfully reset. You can now login with your new password.
           </p>
         </div>
-        <Link href="/auth/login">
+        <Link href="/login">
           <Button className="w-full">Continue to login</Button>
         </Link>
       </div>

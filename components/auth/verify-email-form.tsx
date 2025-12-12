@@ -145,7 +145,7 @@ export function VerifyEmailForm() {
           Send verification email
         </Button>
       </div>
-      <Link href="/auth/login">
+      <Link href="/login">
         <Button variant="ghost" className="w-full">
           Back to login
         </Button>

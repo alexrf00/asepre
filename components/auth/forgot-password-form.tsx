@@ -61,7 +61,7 @@ export function ForgotPasswordForm() {
           <Button variant="outline" className="w-full bg-transparent" onClick={() => setIsEmailSent(false)}>
             Try another email
           </Button>
-          <Link href="/auth/login">
+          <Link href="/login">
             <Button variant="ghost" className="w-full">
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to login
@@ -92,7 +92,7 @@ export function ForgotPasswordForm() {
         Send reset link
       </Button>
 
-      <Link href="/auth/login">
+      <Link href="/login">
         <Button variant="ghost" className="w-full">
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to login

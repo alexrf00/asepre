@@ -27,6 +27,11 @@ export interface Role {
   updatedAt: string
 }
 
+export interface PasswordAction {
+  action: "forgot" | "reset" | "validate" | "change";
+  timestamp: string; // ISO date string
+}
+
 // Auth response from login/register
 export interface AuthResponse {
   accessToken: string
