@@ -4,7 +4,7 @@ import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
-import { Eye, EyeOff, User, Mail, Shield, Key, Calendar, Clock, MailCheck } from "lucide-react"
+import { Eye, EyeOff, User, Mail, Shield, Key, Calendar, Clock, MailCheck, Send } from "lucide-react"
 import { z } from "zod"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -22,6 +22,7 @@ import { updateUserSchema, type UpdateUserFormData } from "@/lib/validations/use
 import { getInitials, formatDateTime, formatRelativeTime } from "@/lib/utils/formatters"
 import { updateUser } from "@/lib/api/users"
 import { changePassword } from "@/lib/api/password"
+import { resendVerification } from "@/lib/api/auth"
 
 // Password change schema with current password
 const changePasswordSchema = z
@@ -33,7 +34,7 @@ const changePasswordSchema = z
       .max(100, "Password must not exceed 100 characters")
       .regex(
         /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-        "Password must contain at least one uppercase letter, one lowercase letter, and one number"
+        "Password must contain at least one uppercase letter, one lowercase letter, and one number",
       ),
     confirmPassword: z.string().min(1, "Please confirm your password"),
   })
@@ -54,6 +55,7 @@ export default function ProfilePage() {
 
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false)
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false)
+  const [isResendingVerification, setIsResendingVerification] = useState(false)
   const [showCurrentPassword, setShowCurrentPassword] = useState(false)
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
@@ -99,7 +101,7 @@ export default function ProfilePage() {
     setIsUpdatingPassword(true)
     try {
       const response = await changePassword(data.currentPassword, data.newPassword)
-      
+
       if (response.success) {
         toast.success("Password updated successfully")
         passwordForm.reset()
@@ -115,6 +117,25 @@ export default function ProfilePage() {
       toast.error(message)
     } finally {
       setIsUpdatingPassword(false)
+    }
+  }
+
+  const handleResendVerification = async () => {
+    if (!user?.email) return
+
+    setIsResendingVerification(true)
+    try {
+      const response = await resendVerification(user.email)
+      if (response.success) {
+        toast.success("Verification email sent! Please check your inbox.")
+      } else {
+        toast.error(response.message || "Failed to send verification email")
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to send verification email"
+      toast.error(message)
+    } finally {
+      setIsResendingVerification(false)
     }
   }
 
@@ -154,6 +175,28 @@ export default function ProfilePage() {
               <span className="truncate">{user.email}</span>
               {user.emailVerified && <MailCheck className="h-4 w-4 text-emerald-500" />}
             </div>
+
+            {!user.emailVerified && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full bg-transparent"
+                onClick={handleResendVerification}
+                disabled={isResendingVerification}
+              >
+                {isResendingVerification ? (
+                  <>
+                    <LoadingSpinner size="sm" className="mr-2" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-4 w-4 mr-2" />
+                    Verify Email
+                  </>
+                )}
+              </Button>
+            )}
 
             <Separator />
 

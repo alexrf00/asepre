@@ -1,4 +1,18 @@
-// Core User type
+// ===== UPDATED TYPES FOR INVITE-ONLY REGISTRATION =====
+
+// Account Status Enum
+export type AccountStatus = 
+  | 'PENDING_VERIFICATION' 
+  | 'PENDING_APPROVAL' 
+  | 'ACTIVE' 
+  | 'SUSPENDED' 
+  | 'DEACTIVATED'
+
+// Invite Status Enum
+export type InviteStatus = 'PENDING' | 'USED' | 'EXPIRED' | 'REVOKED'
+
+// ===== Auth Types =====
+
 export interface User {
   id: number
   userName: string
@@ -7,6 +21,7 @@ export interface User {
   lastName: string
   emailVerified: boolean
   emailVerifiedAt?: string
+  accountStatus: AccountStatus
   roles: string[]
   permissions: string[]
   lastLoginAt?: string
@@ -15,43 +30,18 @@ export interface User {
   updatedAt: string
 }
 
-// Role type
-export interface Role {
-  id: number
-  name: string
-  description: string
-  level: number
-  isSystem: boolean
-  permissions: string[]
-  createdAt: string
-  updatedAt: string
-}
-
-export interface PasswordAction {
-  action: "forgot" | "reset" | "validate" | "change";
-  timestamp: string; // ISO date string
-}
-
-// Auth response from login/register
 export interface AuthResponse {
-  accessToken: string
-  refreshToken: string
-  tokenType: string
+  accessToken?: string    // Only present for ACTIVE users on login
+  refreshToken?: string   // Only present for ACTIVE users on login
+  tokenType?: string
   userId: number
   email: string
   roles: string[]
   emailVerified: boolean
+  accountStatus: AccountStatus
+  message?: string
 }
 
-// API response wrapper
-export interface ApiResponse<T> {
-  success: boolean
-  message: string
-  data?: T
-  errors?: Record<string, string>
-}
-
-// Auth request types
 export interface LoginCredentials {
   email: string
   password: string
@@ -63,6 +53,151 @@ export interface RegisterCredentials {
   password: string
   firstName: string
   lastName: string
+  inviteToken: string  // Required for invite-only registration
+}
+
+export interface LoginErrorResponse {
+  accountNotActive?: boolean
+  accountStatus?: AccountStatus
+  message: string
+  success: false
+}
+
+// ===== Registration Check Types =====
+
+export interface RegistrationCheckResponse {
+  available: boolean
+  email?: string
+  message: string
+}
+
+// ===== Email Verification Types =====
+
+export interface VerifyEmailResponse {
+  success: boolean
+  message: string
+  accountStatus?: AccountStatus
+}
+
+// ===== Invite Types =====
+
+export interface Invite {
+  id: number
+  email: string
+  token: string
+  status: InviteStatus
+  intendedRoles: string[]
+  department?: string
+  notes?: string
+  createdBy: {
+    id: number
+    email: string
+    firstName: string
+    lastName: string
+  }
+  usedBy?: {
+    id: number
+    email: string
+    firstName: string
+    lastName: string
+  }
+  createdAt: string
+  expiresAt: string
+  usedAt?: string
+  revokedAt?: string
+}
+
+export interface CreateInviteRequest {
+  email: string
+  intendedRoles?: string[]
+  department?: string
+  notes?: string
+}
+
+export interface InviteListResponse {
+  content: Invite[]
+  totalElements: number
+  totalPages: number
+  size: number
+  number: number
+}
+
+// ===== User Approval Types =====
+
+export interface ApproveUserRequest {
+  roles?: string[]
+}
+
+export interface RejectUserRequest {
+  reason: string
+}
+
+export interface SuspendUserRequest {
+  reason: string
+}
+
+export interface PendingUser extends User {
+  inviteId?: number
+  intendedRoles?: string[]
+  department?: string
+}
+
+// ===== API Response Types =====
+
+export interface ApiResponse<T> {
+  success: boolean
+  message: string
+  data?: T
+}
+
+export interface PaginatedResponse<T> {
+  content: T[]
+  totalElements: number
+  totalPages: number
+  size: number
+  number: number
+  first: boolean
+  last: boolean
+  empty: boolean
+}
+
+// ===== Role Types =====
+
+export interface Role {
+  id: number
+  name: string
+  description: string
+  level: number
+  permissions: string[]
+  userCount: number
+  isSystemRole: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CreateRoleRequest {
+  name: string
+  description: string
+  level: number
+  permissions: string[]
+}
+
+export interface UpdateRoleRequest {
+  description?: string
+  permissions?: string[]
+}
+
+export interface AssignRoleRequest {
+  userId: number
+  roleName: string
+}
+
+// ===== Other Types =====
+
+export interface UpdateUserRequest {
+  firstName?: string
+  lastName?: string
+  userName?: string
 }
 
 export interface ForgotPasswordRequest {
@@ -72,40 +207,4 @@ export interface ForgotPasswordRequest {
 export interface ResetPasswordRequest {
   token: string
   newPassword: string
-}
-
-// Role management types
-export interface CreateRoleRequest {
-  name: string
-  description: string
-  level: number
-  permissions: string[]
-}
-
-export interface UpdateRoleRequest {
-  description: string
-  permissions: string[]
-}
-
-export interface AssignRoleRequest {
-  userId: number
-  roleName: string
-}
-
-// User update type
-export interface UpdateUserRequest {
-  firstName?: string
-  lastName?: string
-  userName?: string
-}
-
-// Pagination
-export interface PaginatedResponse<T> {
-  content: T[]
-  totalElements: number
-  totalPages: number
-  size: number
-  number: number
-  first: boolean
-  last: boolean
 }
