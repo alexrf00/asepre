@@ -14,7 +14,7 @@ export type InviteStatus = 'PENDING' | 'USED' | 'EXPIRED' | 'REVOKED'
 // ===== Auth Types =====
 
 export interface User {
-  id: number
+  id: string
   userName: string
   email: string
   firstName: string

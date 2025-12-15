@@ -162,9 +162,9 @@ export function RegisterForm() {
           <Mail className="h-8 w-8 text-primary" />
         </div>
         <div className="space-y-2">
-          <h1 className="text-2xl font-bold tracking-tight">Check Your Email</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Pending Approval</h1>
           <p className="text-sm text-muted-foreground">
-            We've sent a verification link to <span className="font-medium">{inviteEmail}</span>.
+            Your Account Has Been Created Now Wait for Administrator Approval. <span className="font-medium">{inviteEmail}</span>.
           </p>
         </div>
         <Card>
@@ -176,17 +176,11 @@ export function RegisterForm() {
               <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-medium text-primary">
                 1
               </div>
-              <p>Click the verification link in your email</p>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-medium text-primary">
-                2
-              </div>
               <p>Wait for an administrator to approve your account</p>
             </div>
             <div className="flex items-start gap-3">
               <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-medium text-primary">
-                3
+                2
               </div>
               <p>You'll receive an email when your account is ready</p>
             </div>

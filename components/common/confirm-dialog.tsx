@@ -1,5 +1,6 @@
 "use client"
 
+import type { ReactNode } from "react"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,8 +16,8 @@ import { LoadingSpinner } from "./loading-spinner"
 interface ConfirmDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  title: string
-  description: string
+  title: ReactNode
+  description: ReactNode
   confirmText?: string
   cancelText?: string
   onConfirm: () => void | Promise<void>
@@ -44,16 +45,18 @@ export function ConfirmDialog({
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
-          <AlertDialogDescription>{description}</AlertDialogDescription>
+
+          <AlertDialogDescription asChild>
+            {typeof description === "string" ? <span>{description}</span> : description}
+          </AlertDialogDescription>
         </AlertDialogHeader>
+
         <AlertDialogFooter>
           <AlertDialogCancel disabled={isLoading}>{cancelText}</AlertDialogCancel>
           <AlertDialogAction
             onClick={handleConfirm}
             disabled={isLoading}
-            className={
-              variant === "destructive" ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""
-            }
+            className={variant === "destructive" ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}
           >
             {isLoading && <LoadingSpinner size="sm" className="mr-2" />}
             {confirmText}

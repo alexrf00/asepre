@@ -1,67 +1,3 @@
-// ===== FILE: components/layout/sidebar.tsx (additions) =====
-// Add these menu items to your existing sidebar navigation
-
-/*
- * IMPORTANT: Add these new navigation items to your sidebar's admin section.
- * The exact implementation depends on your current sidebar structure.
- * Below are the menu items to add.
- */
-
-// Navigation item for Invite Management
-const inviteManagementItem = {
-  title: "Invite Management",
-  href: "/admin/invites",
-  icon: "Mail", // lucide-react Mail icon
-  permissions: ["AUTH_INVITE_LIST", "AUTH_INVITE_READ"],
-}
-
-// Navigation item for User Approval
-const userApprovalItem = {
-  title: "User Approval",
-  href: "/admin/user-approval", 
-  icon: "UserCheck", // lucide-react UserCheck icon
-  permissions: ["AUTH_USER_APPROVE", "AUTH_USER_ACTIVATE"],
-}
-
-/*
- * Example integration into existing sidebar structure:
- * 
- * const adminMenuItems = [
- *   {
- *     title: "Dashboard",
- *     href: "/dashboard",
- *     icon: Home,
- *   },
- *   {
- *     title: "Users",
- *     href: "/users",
- *     icon: Users,
- *     permissions: ["AUTH_USER_READ", "VIEW_USERS"],
- *   },
- *   {
- *     title: "Roles",
- *     href: "/roles", 
- *     icon: Shield,
- *     permissions: ["AUTH_ROLE_READ", "VIEW_ROLES"],
- *   },
- *   // ADD THESE NEW ITEMS:
- *   {
- *     title: "User Approval",
- *     href: "/admin/user-approval",
- *     icon: UserCheck,
- *     permissions: ["AUTH_USER_APPROVE", "AUTH_USER_ACTIVATE"],
- *   },
- *   {
- *     title: "Invite Management",
- *     href: "/admin/invites",
- *     icon: Mail,
- *     permissions: ["AUTH_INVITE_LIST", "AUTH_INVITE_READ"],
- *   },
- * ]
- */
-
-// ===== FULL SIDEBAR EXAMPLE WITH NEW ITEMS =====
-
 import { 
   Home, 
   Users, 
@@ -72,8 +8,8 @@ import {
   LogOut,
   User,
   Activity,
-  Mail,          // Add this import
-  UserCheck,     // Add this import
+  Mail,
+  UserCheck,
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -113,41 +49,40 @@ const adminNavItems = [
     icon: Shield,
     permissions: ["AUTH_ROLE_READ", "VIEW_ROLES"],
   },
-  // NEW: User Approval
   {
     title: "User Approval",
     href: "/admin/user-approval",
     icon: UserCheck,
     permissions: ["AUTH_USER_APPROVE", "AUTH_USER_ACTIVATE"],
   },
-  // NEW: Invite Management
   {
     title: "Invite Management",
     href: "/admin/invites",
     icon: Mail,
     permissions: ["AUTH_INVITE_LIST", "AUTH_INVITE_READ"],
   },
-  {
-    title: "Activity Log",
-    href: "/activity",
-    icon: Activity,
-    permissions: ["AUTH_ACTIVITY_READ", "VIEW_ACTIVITY"],
-  },
+  //TODO:
+  // {
+  //   title: "Activity Log",
+  //   href: "/activity",
+  //   icon: Activity,
+  //   permissions: ["AUTH_ACTIVITY_READ", "VIEW_ACTIVITY"],
+  // },
 ]
-
+//TODO:
 // Settings items
-const settingsNavItems = [
-  {
-    title: "Profile",
-    href: "/profile",
-    icon: User,
-  },
-  {
-    title: "Settings",
-    href: "/settings",
-    icon: Settings,
-  },
-]
+// const settingsNavItems = [
+//   {
+//     title: "Profile",
+//     href: "/profile",
+//     icon: User,
+//   },
+//   {
+//     title: "Settings",
+//     href: "/settings",
+//     icon: Settings,
+//   },
+// ]
 
 export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
   const pathname = usePathname()
@@ -190,7 +125,7 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
             <div className="rounded-lg bg-primary p-1.5">
               <Shield className="h-5 w-5 text-primary-foreground" />
             </div>
-            <span className="font-bold">RBAC Admin</span>
+            <span className="font-bold">ASEPRE SUITE</span>
           </Link>
         )}
         <Button
@@ -241,7 +176,8 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
           </div>
 
           {/* Settings */}
-          <div className="space-y-1">
+          {/*TODO: }
+          {/* <div className="space-y-1">
             {!isCollapsed && (
               <p className="px-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Settings
@@ -254,7 +190,7 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                 isActive={pathname === item.href}
               />
             ))}
-          </div>
+          </div> */}
         </nav>
       </ScrollArea>
 
