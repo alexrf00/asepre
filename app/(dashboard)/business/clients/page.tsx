@@ -32,7 +32,7 @@ export default function ClientsPage() {
   // Data state
   const [clients, setClients] = useState<Client[]>([])
   const [legalTypes, setLegalTypes] = useState<LegalType[]>([])
-  const [stats, setStats] = useState({ total: 0, active: 0, inactive: 0, suspended: 0 })
+  const [stats, setStats] = useState({ totalClients: 0, activeClients: 0, inactiveClients: 0, suspendedClients: 0 })
   const [isLoading, setIsLoading] = useState(true)
 
   // Pagination state
@@ -126,11 +126,11 @@ export default function ClientsPage() {
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-3">
-        <StatsCard title="Total Clientes" value={stats.total} icon={Building2} />
-        <StatsCard title="Activos" value={stats.active} icon={Building2} className="border-l-4 border-l-emerald-500" />
+        <StatsCard title="Total Clientes" value={stats.totalClients} icon={Building2} />
+        <StatsCard title="Activos" value={stats.activeClients} icon={Building2} className="border-l-4 border-l-emerald-500" />
         <StatsCard
           title="Inactivos / Suspendidos"
-          value={stats.inactive + stats.suspended}
+          value={stats.inactiveClients + stats.suspendedClients}
           icon={Building2}
           className="border-l-4 border-l-gray-500"
         />

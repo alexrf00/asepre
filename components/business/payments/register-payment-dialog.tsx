@@ -21,7 +21,7 @@ import { paymentSchema, type PaymentFormData } from "@/lib/validations/business"
 import type { Invoice } from "@/lib/types/business"
 import { CurrencyInput } from "../common/currency-input"
 import { MoneyDisplay } from "../common/money-display"
-import { formatDate } from "@/lib/utils/business"
+import { formatDateDO } from "@/lib/utils/business"
 
 interface RegisterPaymentDialogProps {
   open: boolean
@@ -76,7 +76,7 @@ export function RegisterPaymentDialog({ open, onOpenChange, invoice, onSubmit }:
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Vencimiento:</span>
-            <span>{formatDate(invoice.dueDate)}</span>
+            <span>{formatDateDO(invoice.dueDate)}</span>
           </div>
           <Separator />
           <div className="flex justify-between text-sm">

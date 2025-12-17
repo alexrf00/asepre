@@ -143,6 +143,15 @@ export const recordPaymentSchema = z.object({
   generateReceipt: z.boolean().default(true),
 })
 
+export const paymentSchema = z.object({
+  invoiceId: z.string().uuid(),
+  amount: z.number().min(0.01, "El monto debe ser mayor a 0"),
+  paymentDate: z.string().min(1, "La fecha de pago es requerida"),
+  paymentMethod: z.enum(["transfer", "check", "cash", "card"]),
+  reference: z.string().max(100).optional(),
+  notes: z.string().optional(),
+})
+
 export const createPaymentTypeSchema = z.object({
   code: z
     .string()
@@ -175,5 +184,6 @@ export type CreateInvoiceFormData = z.infer<typeof createInvoiceSchema>
 export type CreateInvoiceLineFormData = z.infer<typeof createInvoiceLineSchema>
 export type CancelInvoiceFormData = z.infer<typeof cancelInvoiceSchema>
 export type RecordPaymentFormData = z.infer<typeof recordPaymentSchema>
+export type PaymentFormData = z.infer<typeof paymentSchema>
 export type CreatePaymentTypeFormData = z.infer<typeof createPaymentTypeSchema>
 export type VoidReceiptFormData = z.infer<typeof voidReceiptSchema>

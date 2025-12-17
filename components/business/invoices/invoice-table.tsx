@@ -14,7 +14,7 @@ import { MoreHorizontal, Eye, Send, DollarSign, XCircle, Download, Mail } from "
 import type { Invoice } from "@/lib/types/business"
 import { StatusBadge } from "../common/status-badge"
 import { MoneyDisplay } from "../common/money-display"
-import { formatDate } from "@/lib/utils/business"
+import { formatDateDO } from "@/lib/utils/business"
 import Link from "next/link"
 
 interface InvoiceTableProps {
@@ -107,10 +107,10 @@ export function InvoiceTable({
                   {invoice.contract?.contractNumber}
                 </Link>
               </TableCell>
-              <TableCell>{formatDate(invoice.issueDate)}</TableCell>
+              <TableCell>{formatDateDO(invoice.issueDate)}</TableCell>
               <TableCell>
                 <span className={isOverdue(invoice) ? "text-destructive font-medium" : ""}>
-                  {formatDate(invoice.dueDate)}
+                  {formatDateDO(invoice.dueDate)}
                 </span>
               </TableCell>
               <TableCell className="text-right">

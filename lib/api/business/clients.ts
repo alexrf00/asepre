@@ -83,10 +83,10 @@ export async function getLegalTypes(): Promise<LegalType[]> {
  * Get client statistics
  */
 export async function getClientStats(): Promise<{
-  total: number
-  active: number
-  inactive: number
-  suspended: number
+  activeClients: number
+  inactiveClients: number
+  prospectClients: number
+  totalClients: number
 }> {
 return businessApiClient(`${BASE_PATH}/stats`)
 }

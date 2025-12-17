@@ -13,10 +13,10 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { DollarSign, Search, Filter, AlertTriangle, CreditCard, TrendingUp } from "lucide-react"
 import type { Payment } from "@/lib/types/business"
 import { paymentsApi } from "@/lib/api/business/payments"
-import { formatCurrency } from "@/lib/utils/business"
+import { formatDOP } from "@/lib/utils/business"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { MoneyDisplay } from "@/components/business/common/money-display"
-import { formatDate, getPaymentMethodLabel } from "@/lib/utils/business"
+import { formatDateDO, getPaymentMethodLabel } from "@/lib/utils/business"
 import { Separator } from "@/components/ui/separator"
 
 export default function PaymentsPage() {
@@ -67,11 +67,11 @@ export default function PaymentsPage() {
               <StatsCard title="Este Mes" value={stats.thisMonth} icon={TrendingUp} />
               <StatsCard
                 title="Monto Total"
-                value={formatCurrency(stats.totalAmount)}
+                value={formatDOP(stats.totalAmount)}
                 icon={CreditCard}
                 className="border-emerald-500"
               />
-              <StatsCard title="Promedio por Pago" value={formatCurrency(stats.avgPayment)} icon={DollarSign} />
+              <StatsCard title="Promedio por Pago" value={formatDOP(stats.avgPayment)} icon={DollarSign} />
             </>
           )}
         </div>
@@ -154,7 +154,7 @@ export default function PaymentsPage() {
                 <div className="space-y-4">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Fecha:</span>
-                    <span>{formatDate(receiptPayment.paymentDate)}</span>
+                    <span>{formatDateDO(receiptPayment.paymentDate)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Cliente:</span>

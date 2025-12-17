@@ -26,7 +26,7 @@ import {
   Download,
 } from "lucide-react"
 import { contractsApi } from "@/lib/api/business/contracts"
-import { formatDate } from "@/lib/utils/business"
+import { formatDateDO } from "@/lib/utils/business"
 
 export default function ContractDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -118,7 +118,7 @@ export default function ContractDetailPage({ params }: { params: Promise<{ id: s
         {daysUntilEnd !== null && daysUntilEnd <= 30 && daysUntilEnd > 0 && (
           <div className="rounded-lg border border-amber-500 bg-amber-50 p-4 dark:bg-amber-950/20">
             <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
-              Este contrato vence en {daysUntilEnd} días ({formatDate(contract.endDate!)})
+              Este contrato vence en {daysUntilEnd} días ({formatDateDO(contract.endDate!)})
             </p>
           </div>
         )}
@@ -149,12 +149,12 @@ export default function ContractDetailPage({ params }: { params: Promise<{ id: s
                       </div>
                       <div>
                         <dt className="text-sm text-muted-foreground">Fecha de Inicio</dt>
-                        <dd className="font-medium">{formatDate(contract.startDate)}</dd>
+                        <dd className="font-medium">{formatDateDO(contract.startDate)}</dd>
                       </div>
                       <div>
                         <dt className="text-sm text-muted-foreground">Fecha de Fin</dt>
                         <dd className="font-medium">
-                          {contract.endDate ? formatDate(contract.endDate) : "Indefinido"}
+                          {contract.endDate ? formatDateDO(contract.endDate) : "Indefinido"}
                         </dd>
                       </div>
                       <div>
@@ -254,7 +254,7 @@ export default function ContractDetailPage({ params }: { params: Promise<{ id: s
                         </div>
                         <div>
                           <p className="font-medium">Contrato creado</p>
-                          <p className="text-sm text-muted-foreground">{formatDate(contract.createdAt)}</p>
+                          <p className="text-sm text-muted-foreground">{formatDateDO(contract.createdAt)}</p>
                         </div>
                       </div>
                     </div>
@@ -320,11 +320,11 @@ export default function ContractDetailPage({ params }: { params: Promise<{ id: s
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Inicio:</span>
-                    <span>{formatDate(contract.startDate)}</span>
+                    <span>{formatDateDO(contract.startDate)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Fin:</span>
-                    <span>{contract.endDate ? formatDate(contract.endDate) : "Indefinido"}</span>
+                    <span>{contract.endDate ? formatDateDO(contract.endDate) : "Indefinido"}</span>
                   </div>
                   {daysUntilEnd !== null && (
                     <div className="flex justify-between">

@@ -13,7 +13,7 @@ import { MoreHorizontal, Eye, Pencil, FileText, XCircle, CheckCircle, RotateCcw 
 import type { Contract } from "@/lib/types/business"
 import { StatusBadge } from "../common/status-badge"
 import { MoneyDisplay } from "../common/money-display"
-import { formatDate } from "@/lib/utils/business"
+import { formatDateDO } from "@/lib/utils/business"
 import Link from "next/link"
 
 interface ContractTableProps {
@@ -102,9 +102,9 @@ export function ContractTable({
               </TableCell>
               <TableCell>
                 <div className="text-sm">
-                  <p>{formatDate(contract.startDate)}</p>
+                  <p>{formatDateDO(contract.startDate)}</p>
                   <p className="text-muted-foreground">
-                    {contract.endDate ? formatDate(contract.endDate) : "Indefinido"}
+                    {contract.endDate ? formatDateDO(contract.endDate) : "Indefinido"}
                   </p>
                 </div>
               </TableCell>

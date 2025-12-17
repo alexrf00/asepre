@@ -23,7 +23,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { FileText, Plus, Search, Filter, AlertTriangle } from "lucide-react"
 import type { Contract } from "@/lib/types/business"
 import { contractsApi } from "@/lib/api/business/contracts"
-import { formatCurrency } from "@/lib/utils/business"
+import { formatDOP } from "@/lib/utils/business"
 import { toast } from "sonner"
 import Link from "next/link"
 
@@ -119,7 +119,7 @@ export default function ContractsPage() {
                 icon={AlertTriangle}
                 className={stats.expiringSoon > 0 ? "border-amber-500" : ""}
               />
-              <StatsCard title="Ingreso Mensual" value={formatCurrency(stats.monthlyRevenue)} icon={FileText} />
+              <StatsCard title="Ingreso Mensual" value={formatDOP(stats.monthlyRevenue)} icon={FileText} />
             </>
           )}
         </div>

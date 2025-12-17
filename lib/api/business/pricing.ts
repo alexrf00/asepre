@@ -29,14 +29,26 @@ export async function setGlobalPrice(data: SetGlobalPriceRequest): Promise<Busin
  * Get current global price for a service
  */
 export async function getGlobalPrice(serviceId: string): Promise<GlobalServicePrice | null> {
-  return apiClient<GlobalServicePrice | null>(`${BASE_PATH}/global/${serviceId}`)
+  try {
+    return await businessApiClient<GlobalServicePrice>(`${BASE_PATH}/global/${serviceId}`)
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : ""
+    if (msg.toLowerCase().includes("no active global price found")) return null
+    throw err
+  }
 }
-
 /**
  * Get global price history for a service
  */
 export async function getGlobalPriceHistory(serviceId: string): Promise<GlobalServicePrice[]> {
-  return apiClient<GlobalServicePrice[]>(`${BASE_PATH}/global/${serviceId}/history`)
+  try {
+    return await businessApiClient<GlobalServicePrice[]>(`${BASE_PATH}/global/${serviceId}/history`)
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : ""
+    // treat "no history" as empty (adjust to your backend message if different)
+    if (msg.toLowerCase().includes("no") && msg.toLowerCase().includes("history")) return []
+    throw err
+  }
 }
 
 /**
@@ -61,8 +73,15 @@ export async function setClientPrice(data: SetClientPriceRequest): Promise<Busin
 /**
  * Get client-specific price for a service
  */
+
 export async function getClientPrice(serviceId: string, clientId: string): Promise<ClientServicePrice | null> {
-  return apiClient<ClientServicePrice | null>(`${BASE_PATH}/client/${serviceId}/${clientId}`)
+  try {
+    return await businessApiClient<ClientServicePrice>(`${BASE_PATH}/client/${serviceId}/${clientId}`)
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : ""
+    if (msg.toLowerCase().includes("no active") && msg.toLowerCase().includes("price")) return null
+    throw err
+  }
 }
 
 /**

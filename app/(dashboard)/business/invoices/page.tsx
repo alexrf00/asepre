@@ -23,16 +23,16 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Skeleton } from "@/components/ui/skeleton"
 import { FileText, Plus, Search, Filter, AlertTriangle, DollarSign, Clock } from "lucide-react"
-import type { Invoice } from "@/lib/types/business"
-import { invoicesApi } from "@/lib/api/business/invoices"
-import { paymentsApi } from "@/lib/api/business/payments"
-import { formatCurrency } from "@/lib/utils/business"
+import type { Invoice, InvoiceStatus, CreateInvoiceRequest } from "@/lib/types/business"
+import { getInvoices, createInvoice, issueInvoice, cancelInvoice, getInvoiceStats } from "@/lib/api/business/invoices"
+import { recordPayment } from "@/lib/api/business/payments"
+import { formatDOP } from "@/lib/utils/business"
 import { toast } from "sonner"
 
 export default function InvoicesPage() {
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
-  const [page, setPage] = useState(1)
+  const [page, setPage] = useState(0)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [invoiceToSend, setInvoiceToSend] = useState<Invoice | null>(null)
@@ -40,17 +40,14 @@ export default function InvoicesPage() {
   const [invoiceForPayment, setInvoiceForPayment] = useState<Invoice | null>(null)
 
   const { data, error, isLoading, mutate } = useSWR(["invoices", search, statusFilter, page], () =>
-    invoicesApi.getAll({
-      search,
-      status: statusFilter !== "all" ? statusFilter : undefined,
-      page,
-      limit: 10,
-    }),
+    getInvoices(page, 10, undefined, statusFilter !== "all" ? (statusFilter as InvoiceStatus) : undefined, undefined),
   )
 
-  const handleCreate = async (formData: Parameters<typeof invoicesApi.create>[0]) => {
+  const { data: statsData } = useSWR("invoice-stats", getInvoiceStats)
+
+  const handleCreate = async (formData: CreateInvoiceRequest) => {
     try {
-      await invoicesApi.create(formData)
+      await createInvoice(formData)
       toast.success("Factura creada exitosamente")
       mutate()
     } catch {
@@ -62,7 +59,7 @@ export default function InvoicesPage() {
   const handleSend = async () => {
     if (!invoiceToSend) return
     try {
-      await invoicesApi.send(invoiceToSend.id)
+      await issueInvoice(invoiceToSend.id)
       toast.success("Factura enviada al cliente")
       mutate()
     } catch {
@@ -75,7 +72,7 @@ export default function InvoicesPage() {
   const handleCancel = async () => {
     if (!invoiceToCancel) return
     try {
-      await invoicesApi.cancel(invoiceToCancel.id)
+      await cancelInvoice(invoiceToCancel.id, { reason: "Anulada por usuario" })
       toast.success("Factura anulada")
       mutate()
     } catch {
@@ -85,9 +82,28 @@ export default function InvoicesPage() {
     }
   }
 
-  const handleRegisterPayment = async (data: Parameters<typeof paymentsApi.create>[0]) => {
+  const handleRegisterPayment = async (paymentData: {
+    invoiceId: string
+    amount: number
+    paymentMethodId: string
+    reference?: string
+  }) => {
+    if (!invoiceForPayment) return
     try {
-      await paymentsApi.create(data)
+      await recordPayment({
+        clientId: invoiceForPayment.clientId,
+        paymentTypeId: paymentData.paymentMethodId,
+        amount: paymentData.amount,
+        paymentDate: new Date().toISOString().split("T")[0],
+        reference: paymentData.reference,
+        allocations: [
+          {
+            invoiceId: paymentData.invoiceId,
+            amount: paymentData.amount,
+          },
+        ],
+        generateReceipt: true,
+      })
       toast.success("Pago registrado exitosamente")
       mutate()
     } catch {
@@ -96,12 +112,15 @@ export default function InvoicesPage() {
     }
   }
 
-  const invoices = data?.data || []
+  const invoices = data?.content || []
+  const totalPages = data?.totalPages || 1
+  const totalElements = data?.totalElements || 0
+
   const stats = {
-    total: data?.pagination?.total || 0,
-    pending: invoices.filter((i) => i.status === "sent").length,
-    overdue: invoices.filter((i) => i.status === "sent" && new Date(i.dueDate) < new Date()).length,
-    totalPending: invoices.filter((i) => i.status === "sent").reduce((sum, i) => sum + i.balanceDue, 0),
+    total: statsData?.draft ?? 0 + (statsData?.issued ?? 0) + (statsData?.partial ?? 0) + (statsData?.paid ?? 0),
+    pending: statsData?.issued ?? 0,
+    overdue: statsData?.overdue ?? 0,
+    totalPending: statsData?.totalReceivables ?? 0,
   }
 
   return (
@@ -126,7 +145,7 @@ export default function InvoicesPage() {
             Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-32" />)
           ) : (
             <>
-              <StatsCard title="Total Facturas" value={stats.total} icon={FileText} />
+              <StatsCard title="Total Facturas" value={totalElements} icon={FileText} />
               <StatsCard title="Por Cobrar" value={stats.pending} icon={Clock} />
               <StatsCard
                 title="Vencidas"
@@ -136,7 +155,7 @@ export default function InvoicesPage() {
               />
               <StatsCard
                 title="Monto Pendiente"
-                value={formatCurrency(stats.totalPending)}
+                value={formatDOP(stats.totalPending)}
                 icon={DollarSign}
                 className={stats.totalPending > 0 ? "border-amber-500" : ""}
               />
@@ -163,11 +182,11 @@ export default function InvoicesPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas</SelectItem>
-                <SelectItem value="draft">Borrador</SelectItem>
-                <SelectItem value="sent">Enviada</SelectItem>
-                <SelectItem value="partial">Pago Parcial</SelectItem>
-                <SelectItem value="paid">Pagada</SelectItem>
-                <SelectItem value="cancelled">Anulada</SelectItem>
+                <SelectItem value="DRAFT">Borrador</SelectItem>
+                <SelectItem value="ISSUED">Emitida</SelectItem>
+                <SelectItem value="PARTIAL">Pago Parcial</SelectItem>
+                <SelectItem value="PAID">Pagada</SelectItem>
+                <SelectItem value="CANCELLED">Anulada</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -181,14 +200,14 @@ export default function InvoicesPage() {
             icon={AlertTriangle}
             title="Error al cargar"
             description="No se pudieron cargar las facturas"
-            action={{ label: "Reintentar", onClick: () => mutate() }}
+            action={<Button onClick={() => mutate()}>Reintentar</Button>}
           />
         ) : invoices.length === 0 ? (
           <EmptyState
             icon={FileText}
             title="Sin facturas"
             description="No hay facturas que coincidan con los filtros"
-            action={{ label: "Crear Factura", onClick: () => setCreateDialogOpen(true) }}
+            action={<Button onClick={() => setCreateDialogOpen(true)}>Crear Factura</Button>}
           />
         ) : (
           <InvoiceTable
@@ -202,19 +221,19 @@ export default function InvoicesPage() {
         )}
 
         {/* Pagination */}
-        {data?.pagination && data.pagination.totalPages > 1 && (
+        {totalPages > 1 && (
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              Mostrando {invoices.length} de {data.pagination.total} facturas
+              Mostrando {invoices.length} de {totalElements} facturas
             </p>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>
+              <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>
                 Anterior
               </Button>
               <Button
                 variant="outline"
                 size="sm"
-                disabled={page === data.pagination.totalPages}
+                disabled={page >= totalPages - 1}
                 onClick={() => setPage((p) => p + 1)}
               >
                 Siguiente

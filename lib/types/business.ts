@@ -179,6 +179,12 @@ export interface Invoice {
   createdAt: string
   cancelledAt?: string
   cancellationReason?: string
+  client: any
+  taxAmount: number
+  totalAmount: number
+  paidAmount: number
+  balanceDue: number
+  items: any[]
 }
 
 export interface InvoiceLine {

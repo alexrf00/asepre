@@ -254,7 +254,31 @@ export function calculateLineTotal(
     total: subtotal + itbis,
   }
 }
+// ===== Payment Method Label Function =====
 
+/**
+ * Get payment method label (for display purposes)
+ * Maps payment method codes to human-readable Spanish labels
+ */
+export function getPaymentMethodLabel(method: string): string {
+  const labels: Record<string, string> = {
+    CASH: "Efectivo",
+    cash: "Efectivo",
+    TRANSFER: "Transferencia",
+    transfer: "Transferencia",
+    CHECK: "Cheque",
+    check: "Cheque",
+    CARD: "Tarjeta",
+    card: "Tarjeta",
+    CREDIT_CARD: "Tarjeta de Crédito",
+    DEBIT_CARD: "Tarjeta de Débito",
+    BANK_TRANSFER: "Transferencia Bancaria",
+    WIRE: "Transferencia Electrónica",
+    OTHER: "Otro",
+    other: "Otro",
+  }
+  return labels[method] || method
+}
 // ===== Validation Helpers =====
 
 /**

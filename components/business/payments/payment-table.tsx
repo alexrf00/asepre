@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { MoreHorizontal, Eye, FileText, Printer } from "lucide-react"
 import type { Payment } from "@/lib/types/business"
 import { MoneyDisplay } from "../common/money-display"
-import { formatDate, getPaymentMethodLabel } from "@/lib/utils/business"
+import { formatDateDO, getPaymentMethodLabel } from "@/lib/utils/business"
 import Link from "next/link"
 
 interface PaymentTableProps {
@@ -34,7 +34,7 @@ export function PaymentTable({ payments, onViewReceipt }: PaymentTableProps) {
         <TableBody>
           {payments.map((payment) => (
             <TableRow key={payment.id}>
-              <TableCell>{formatDate(payment.paymentDate)}</TableCell>
+              <TableCell>{formatDateDO(payment.paymentDate)}</TableCell>
               <TableCell>
                 <div>
                   <p className="font-medium">{payment.invoice?.client?.companyName}</p>

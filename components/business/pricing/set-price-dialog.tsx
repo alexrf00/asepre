@@ -7,7 +7,7 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
 import { CalendarIcon } from "lucide-react"
-import { format } from "date-fns"
+import { format, isValid } from "date-fns"
 import { es } from "date-fns/locale"
 
 import { Button } from "@/components/ui/button"
@@ -95,7 +95,11 @@ export function SetPriceDialog({ service, open, onOpenChange, onSuccess }: SetPr
             <p className="text-sm text-muted-foreground">Precio actual</p>
             <p className="text-xl font-bold">{formatDOP(currentPrice.price)}</p>
             <p className="text-xs text-muted-foreground">
-              Vigente desde: {format(new Date(currentPrice.effectiveFrom), "dd/MM/yyyy", { locale: es })}
+              Vigente desde:{" "}
+              {(() => {
+                const d = new Date(currentPrice.effectiveFrom)
+                return isValid(d) ? format(d, "dd/MM/yyyy", { locale: es }) : "-"
+              })()}
             </p>
           </div>
         )}

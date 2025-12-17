@@ -15,11 +15,10 @@ import { Button } from "@/components/ui/button"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Separator } from "@/components/ui/separator"
 import { Plus, Trash2 } from "lucide-react"
-import { invoiceSchema, type InvoiceFormData } from "@/lib/validations/business"
+import { createInvoiceSchema, type CreateInvoiceFormData } from "@/lib/validations/business"
 import { ClientSelector } from "../common/client-selector"
 import { ServiceSelector } from "../common/service-selector"
 import { CurrencyInput } from "../common/currency-input"
@@ -28,21 +27,20 @@ import { MoneyDisplay } from "../common/money-display"
 interface CreateInvoiceDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onSubmit: (data: InvoiceFormData) => Promise<void>
+  onSubmit: (data: CreateInvoiceFormData) => Promise<void>
 }
 
 export function CreateInvoiceDialog({ open, onOpenChange, onSubmit }: CreateInvoiceDialogProps) {
   const [isLoading, setIsLoading] = useState(false)
 
-  const form = useForm<InvoiceFormData>({
-    resolver: zodResolver(invoiceSchema),
+  const form = useForm<CreateInvoiceFormData>({
+    resolver: zodResolver(createInvoiceSchema),
     defaultValues: {
       clientId: "",
       contractId: "",
-      ncfType: "B01",
       issueDate: new Date().toISOString().split("T")[0],
       dueDate: "",
-      lines: [{ serviceId: "", description: "", quantity: 1, unitPrice: 0, applyItbis: true }],
+      lines: [{ serviceId: "", description: "", quantity: 1, unitPrice: 0, itbisApplicable: true }],
       notes: "",
     },
   })
@@ -55,7 +53,7 @@ export function CreateInvoiceDialog({ open, onOpenChange, onSubmit }: CreateInvo
   const watchLines = form.watch("lines")
   const subtotal = watchLines.reduce((sum, line) => sum + line.quantity * line.unitPrice, 0)
   const itbis = watchLines.reduce(
-    (sum, line) => (line.applyItbis ? sum + line.quantity * line.unitPrice * 0.18 : sum),
+    (sum, line) => (line.itbisApplicable ? sum + line.quantity * line.unitPrice * 0.18 : sum),
     0,
   )
   const total = subtotal + itbis
@@ -98,23 +96,13 @@ export function CreateInvoiceDialog({ open, onOpenChange, onSubmit }: CreateInvo
 
               <FormField
                 control={form.control}
-                name="ncfType"
+                name="contractId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Tipo de NCF *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Seleccionar tipo" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="B01">B01 - Crédito Fiscal</SelectItem>
-                        <SelectItem value="B02">B02 - Consumidor Final</SelectItem>
-                        <SelectItem value="B14">B14 - Régimen Especial</SelectItem>
-                        <SelectItem value="B15">B15 - Gubernamental</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <FormLabel>Contrato (opcional)</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="ID del contrato asociado" />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -173,7 +161,7 @@ export function CreateInvoiceDialog({ open, onOpenChange, onSubmit }: CreateInvo
                         <FormItem>
                           <FormLabel>Servicio</FormLabel>
                           <FormControl>
-                            <ServiceSelector value={field.value} onChange={field.onChange} />
+                            <ServiceSelector value={field.value || ""} onChange={field.onChange} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -230,7 +218,7 @@ export function CreateInvoiceDialog({ open, onOpenChange, onSubmit }: CreateInvo
 
                   <FormField
                     control={form.control}
-                    name={`lines.${index}.applyItbis`}
+                    name={`lines.${index}.itbisApplicable`}
                     render={({ field }) => (
                       <FormItem className="flex items-center gap-2">
                         <FormControl>
@@ -246,7 +234,9 @@ export function CreateInvoiceDialog({ open, onOpenChange, onSubmit }: CreateInvo
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => append({ serviceId: "", description: "", quantity: 1, unitPrice: 0, applyItbis: true })}
+                onClick={() =>
+                  append({ serviceId: "", description: "", quantity: 1, unitPrice: 0, itbisApplicable: true })
+                }
                 className="w-full bg-transparent"
               >
                 <Plus className="mr-2 h-4 w-4" />
