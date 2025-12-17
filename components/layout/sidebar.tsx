@@ -1,15 +1,25 @@
-import { 
-  Home, 
-  Users, 
-  Shield, 
-  Settings, 
-  ChevronLeft, 
+"use client"
+
+import type React from "react"
+
+import {
+  Home,
+  Users,
+  Shield,
+  ChevronLeft,
   ChevronRight,
   LogOut,
-  User,
-  Activity,
-  Mail,
   UserCheck,
+  Mail,
+  LayoutDashboard,
+  Building2,
+  Briefcase,
+  DollarSign,
+  FileText,
+  Receipt,
+  CreditCard,
+  BarChart3,
+  Settings,
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -17,9 +27,9 @@ import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Separator } from "@/components/ui/separator"
 import { useAuthStore } from "@/lib/store/auth-store"
 import { PermissionGate } from "@/components/common/permission-gate"
+import Image from "next/image"
 
 interface SidebarProps {
   isCollapsed: boolean
@@ -61,33 +71,68 @@ const adminNavItems = [
     icon: Mail,
     permissions: ["AUTH_INVITE_LIST", "AUTH_INVITE_READ"],
   },
-  //TODO:
-  // {
-  //   title: "Activity Log",
-  //   href: "/activity",
-  //   icon: Activity,
-  //   permissions: ["AUTH_ACTIVITY_READ", "VIEW_ACTIVITY"],
-  // },
 ]
-//TODO:
-// Settings items
-// const settingsNavItems = [
-//   {
-//     title: "Profile",
-//     href: "/profile",
-//     icon: User,
-//   },
-//   {
-//     title: "Settings",
-//     href: "/settings",
-//     icon: Settings,
-//   },
-// ]
+
+const businessNavItems = [
+  {
+    title: "Overview",
+    href: "/business",
+    icon: LayoutDashboard,
+    permissions: ["BUSINESS_CLIENT_READ"],
+  },
+  {
+    title: "Clients",
+    href: "/business/clients",
+    icon: Building2,
+    permissions: ["BUSINESS_CLIENT_READ"],
+  },
+  {
+    title: "Services",
+    href: "/business/services",
+    icon: Briefcase,
+    permissions: ["BUSINESS_SERVICE_READ"],
+  },
+  {
+    title: "Pricing",
+    href: "/business/pricing",
+    icon: DollarSign,
+    permissions: ["BUSINESS_PRICE_READ"],
+  },
+  {
+    title: "Contracts",
+    href: "/business/contracts",
+    icon: FileText,
+    permissions: ["BUSINESS_CONTRACT_READ"],
+  },
+  {
+    title: "Invoices",
+    href: "/business/invoices",
+    icon: Receipt,
+    permissions: ["BUSINESS_INVOICE_READ"],
+  },
+  {
+    title: "Payments",
+    href: "/business/payments",
+    icon: CreditCard,
+    permissions: ["BUSINESS_PAYMENT_READ"],
+  },
+  {
+    title: "Reports",
+    href: "/business/reports",
+    icon: BarChart3,
+    permissions: ["BUSINESS_REPORT_READ"],
+  },
+  {
+    title: "Settings",
+    href: "/business/settings",
+    icon: Settings,
+    permissions: ["BUSINESS_CONFIG_MANAGE"],
+  },
+]
 
 export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
   const pathname = usePathname()
   const logout = useAuthStore((state) => state.logout)
-  const user = useAuthStore((state) => state.user)
 
   const NavItem = ({
     item,
@@ -100,10 +145,8 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
       href={item.href}
       className={cn(
         "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
-        isActive
-          ? "bg-primary/10 text-primary"
-          : "text-muted-foreground hover:bg-muted hover:text-foreground",
-        isCollapsed && "justify-center px-2"
+        isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground",
+        isCollapsed && "justify-center px-2",
       )}
     >
       <item.icon className="h-4 w-4 shrink-0" />
@@ -111,34 +154,35 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
     </Link>
   )
 
+  const isPathActive = (href: string) => {
+    if (href === "/business") {
+      return pathname === "/business"
+    }
+    return pathname === href || pathname.startsWith(href + "/")
+  }
+
   return (
     <aside
       className={cn(
         "flex h-full flex-col border-r border-border bg-card transition-all duration-300",
-        isCollapsed ? "w-16" : "w-64"
+        isCollapsed ? "w-16" : "w-64",
       )}
     >
-      {/* Header */}
+      {/* Header - Updated to use ASEPRE logo */}
       <div className="flex h-16 items-center justify-between px-4 border-b border-border">
         {!isCollapsed && (
           <Link href="/dashboard" className="flex items-center gap-2">
-            <div className="rounded-lg bg-primary p-1.5">
-              <Shield className="h-5 w-5 text-primary-foreground" />
-            </div>
-            <span className="font-bold">ASEPRE SUITE</span>
+            <Image src="/images/asepre-logo.png" alt="ASEPRE" width={40} height={40} className="rounded-lg" />
+            <span className="font-bold">ASEPRE</span>
           </Link>
         )}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onToggle}
-          className={cn(isCollapsed && "mx-auto")}
-        >
-          {isCollapsed ? (
-            <ChevronRight className="h-4 w-4" />
-          ) : (
-            <ChevronLeft className="h-4 w-4" />
-          )}
+        {isCollapsed && (
+          <Link href="/dashboard" className="mx-auto">
+            <Image src="/images/asepre-logo.png" alt="ASEPRE" width={32} height={32} className="rounded-lg" />
+          </Link>
+        )}
+        <Button variant="ghost" size="icon" onClick={onToggle} className={cn(isCollapsed && "hidden")}>
+          {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
         </Button>
       </div>
 
@@ -148,25 +192,28 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
           {/* Main */}
           <div className="space-y-1">
             {!isCollapsed && (
-              <p className="px-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Main
-              </p>
+              <p className="px-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Main</p>
             )}
             {mainNavItems.map((item) => (
-              <NavItem
-                key={item.href}
-                item={item}
-                isActive={pathname === item.href}
-              />
+              <NavItem key={item.href} item={item} isActive={pathname === item.href} />
+            ))}
+          </div>
+
+          <div className="space-y-1">
+            {!isCollapsed && (
+              <p className="px-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Business</p>
+            )}
+            {businessNavItems.map((item) => (
+              <PermissionGate key={item.href} permissions={item.permissions}>
+                <NavItem item={item} isActive={isPathActive(item.href)} />
+              </PermissionGate>
             ))}
           </div>
 
           {/* Administration */}
           <div className="space-y-1">
             {!isCollapsed && (
-              <p className="px-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Administration
-              </p>
+              <p className="px-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Administration</p>
             )}
             {adminNavItems.map((item) => (
               <PermissionGate key={item.href} permissions={item.permissions}>
@@ -174,23 +221,6 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
               </PermissionGate>
             ))}
           </div>
-
-          {/* Settings */}
-          {/*TODO: }
-          {/* <div className="space-y-1">
-            {!isCollapsed && (
-              <p className="px-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Settings
-              </p>
-            )}
-            {settingsNavItems.map((item) => (
-              <NavItem
-                key={item.href}
-                item={item}
-                isActive={pathname === item.href}
-              />
-            ))}
-          </div> */}
         </nav>
       </ScrollArea>
 
@@ -200,7 +230,7 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
           variant="ghost"
           className={cn(
             "w-full justify-start gap-3 text-muted-foreground hover:text-foreground",
-            isCollapsed && "justify-center px-2"
+            isCollapsed && "justify-center px-2",
           )}
           onClick={logout}
         >
