@@ -72,11 +72,11 @@ export const setClientPriceSchema = z.object({
 // ===== Contract Validations =====
 
 export const createContractLineSchema = z.object({
-  serviceId: z.string().uuid("Seleccione un servicio"),
-  quantity: z.number().min(0.01, "La cantidad debe ser mayor a 0"),
+  serviceId: z.string().min(1, "Seleccione un servicio"),
+  quantity: z.number().min(0.01, "Cantidad inválida"),
   billingUnitId: z.string().uuid().optional(),
-  manualUnitPrice: z.number().min(0).optional(),
-  itbisApplicable: z.boolean().default(true),
+  manualUnitPrice: z.number().min(0),
+  itbisApplicable: z.boolean(), // <-- REQUIRED (fixes resolver typing)
   scheduleNotes: z.string().max(500).optional(),
 })
 

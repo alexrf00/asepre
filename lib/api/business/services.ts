@@ -39,9 +39,19 @@ export async function listServicesPage(options: {
 /**
  * Get all services (returns array for UI consumption).
  */
+
 export async function getServices(activeOnly = true): Promise<ServiceCatalog[]> {
-  const page = await listServicesPage({ activeOnly, page: 0, size: 1000 })
-  return Array.isArray(page?.content) ? page.content : []
+  const params = new URLSearchParams({
+    page: "0",
+    size: "1000",
+  })
+  if (activeOnly) params.append("activeOnly", "true")
+
+  const page = await businessApiClient<BusinessPaginatedResponse<ServiceCatalog>>(
+    `${BASE_PATH}?${params.toString()}`,
+  )
+
+  return page.content ?? []
 }
 
 /**

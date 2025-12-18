@@ -3666,52 +3666,101 @@ export default function PaymentsLoading() {
 
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import useSWR from "swr"
+import { toast } from "sonner"
+import { DollarSign, Search, Filter, AlertTriangle, CreditCard, TrendingUp } from "lucide-react"
+
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Separator } from "@/components/ui/separator"
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+
 import { StatsCard } from "@/components/dashboard/stats-card"
 import { EmptyState } from "@/components/common/empty-state"
 import { PermissionGate } from "@/components/common/permission-gate"
 import { PaymentTable } from "@/components/business/payments/payment-table"
-import { Skeleton } from "@/components/ui/skeleton"
-import { DollarSign, Search, Filter, AlertTriangle, CreditCard, TrendingUp } from "lucide-react"
-import type { Payment } from "@/lib/types/business"
-import { paymentsApi } from "@/lib/api/business/payments"
-import { formatDOP } from "@/lib/utils/business"
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { MoneyDisplay } from "@/components/business/common/money-display"
-import { formatDateDO, getPaymentMethodLabel } from "@/lib/utils/business"
-import { Separator } from "@/components/ui/separator"
+
+import type { Payment, Receipt } from "@/lib/types/business"
+import { getPayments } from "@/lib/api/business/payments"
+import { getReceiptByPayment } from "@/lib/api/business/receipts"
+import { formatDOP, formatDateDO, getPaymentMethodLabel } from "@/lib/utils/business"
+
+const PAGE_SIZE = 10
 
 export default function PaymentsPage() {
   const [search, setSearch] = useState("")
   const [methodFilter, setMethodFilter] = useState<string>("all")
   const [page, setPage] = useState(1)
+
   const [receiptPayment, setReceiptPayment] = useState<Payment | null>(null)
+  const [receipt, setReceipt] = useState<Receipt | null>(null)
+  const [isReceiptLoading, setIsReceiptLoading] = useState(false)
 
-  const { data, error, isLoading, mutate } = useSWR(["payments", search, methodFilter, page], () =>
-    paymentsApi.getAll({
-      search,
-      paymentMethod: methodFilter !== "all" ? methodFilter : undefined,
-      page,
-      limit: 10,
-    }),
-  )
+  const { data, error, isLoading, mutate } = useSWR(["payments", page], () => getPayments(page - 1, PAGE_SIZE))
 
-  const payments = data?.data || []
+  const paymentsRaw = data?.content ?? []
 
-  const stats = {
-    total: data?.pagination?.total || 0,
-    thisMonth: payments.filter((p) => {
-      const paymentDate = new Date(p.paymentDate)
+  const payments = useMemo(() => {
+    const s = search.trim().toLowerCase()
+    return paymentsRaw.filter((p) => {
+      const matchesSearch =
+        !s ||
+        p.clientName.toLowerCase().includes(s) ||
+        p.paymentNumber.toLowerCase().includes(s) ||
+        (p.reference ?? "").toLowerCase().includes(s)
+
+      const matchesMethod =
+        methodFilter === "all" || (p.paymentTypeCode ?? "").toLowerCase() === methodFilter.toLowerCase()
+
+      return matchesSearch && matchesMethod
+    })
+  }, [paymentsRaw, search, methodFilter])
+
+  const stats = useMemo(() => {
+    const totalElements = data?.totalElements ?? payments.length
+
+    const thisMonth = payments.filter((p) => {
+      const d = new Date(p.paymentDate)
       const now = new Date()
-      return paymentDate.getMonth() === now.getMonth() && paymentDate.getFullYear() === now.getFullYear()
-    }).length,
-    totalAmount: payments.reduce((sum, p) => sum + p.amount, 0),
-    avgPayment: payments.length > 0 ? payments.reduce((sum, p) => sum + p.amount, 0) / payments.length : 0,
+      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
+    }).length
+
+    const totalAmount = payments.reduce((sum, p) => sum + p.amount, 0)
+    const avgPayment = payments.length > 0 ? totalAmount / payments.length : 0
+
+    return { totalElements, thisMonth, totalAmount, avgPayment }
+  }, [data?.totalElements, payments])
+
+  async function handleViewReceipt(payment: Payment) {
+    setReceiptPayment(payment)
+    setReceipt(null)
+    setIsReceiptLoading(true)
+
+    try {
+      const r = await getReceiptByPayment(payment.id)
+      if (!r) {
+        toast.message("Este pago no tiene recibo todavía")
+      }
+      setReceipt(r)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Error cargando recibo")
+      setReceipt(null)
+    } finally {
+      setIsReceiptLoading(false)
+    }
   }
+
+  function closeReceipt() {
+    setReceiptPayment(null)
+    setReceipt(null)
+    setIsReceiptLoading(false)
+  }
+
+  const firstInvoice = receiptPayment?.allocations?.[0]
 
   return (
     <PermissionGate permissions={["payments.view"]}>
@@ -3723,26 +3772,19 @@ export default function PaymentsPage() {
           </div>
         </div>
 
-        {/* Stats */}
         <div className="grid gap-4 md:grid-cols-4">
           {isLoading ? (
             Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-32" />)
           ) : (
             <>
-              <StatsCard title="Total Pagos" value={stats.total} icon={DollarSign} />
+              <StatsCard title="Total Pagos" value={stats.totalElements} icon={DollarSign} />
               <StatsCard title="Este Mes" value={stats.thisMonth} icon={TrendingUp} />
-              <StatsCard
-                title="Monto Total"
-                value={formatDOP(stats.totalAmount)}
-                icon={CreditCard}
-                className="border-emerald-500"
-              />
+              <StatsCard title="Monto Total" value={formatDOP(stats.totalAmount)} icon={CreditCard} className="border-emerald-500" />
               <StatsCard title="Promedio por Pago" value={formatDOP(stats.avgPayment)} icon={DollarSign} />
             </>
           )}
         </div>
 
-        {/* Filters */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -3753,6 +3795,7 @@ export default function PaymentsPage() {
               className="pl-10"
             />
           </div>
+
           <div className="flex gap-2">
             <Select value={methodFilter} onValueChange={setMethodFilter}>
               <SelectTrigger className="w-[180px]">
@@ -3770,7 +3813,6 @@ export default function PaymentsPage() {
           </div>
         </div>
 
-        {/* Table */}
         {isLoading ? (
           <Skeleton className="h-96" />
         ) : error ? (
@@ -3783,69 +3825,75 @@ export default function PaymentsPage() {
         ) : payments.length === 0 ? (
           <EmptyState icon={DollarSign} title="Sin pagos" description="No hay pagos que coincidan con los filtros" />
         ) : (
-          <PaymentTable payments={payments} onViewReceipt={setReceiptPayment} />
+          <PaymentTable payments={payments} onViewReceipt={handleViewReceipt} />
         )}
 
-        {/* Pagination */}
-        {data?.pagination && data.pagination.totalPages > 1 && (
+        {data && data.totalPages > 1 && (
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              Mostrando {payments.length} de {data.pagination.total} pagos
+              Mostrando {payments.length} de {data.totalElements} pagos
             </p>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>
                 Anterior
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page === data.pagination.totalPages}
-                onClick={() => setPage((p) => p + 1)}
-              >
+              <Button variant="outline" size="sm" disabled={page === data.totalPages} onClick={() => setPage((p) => p + 1)}>
                 Siguiente
               </Button>
             </div>
           </div>
         )}
 
-        {/* Receipt Sheet */}
-        <Sheet open={!!receiptPayment} onOpenChange={() => setReceiptPayment(null)}>
+        <Sheet open={!!receiptPayment} onOpenChange={(open) => !open && closeReceipt()}>
           <SheetContent>
             <SheetHeader>
               <SheetTitle>Recibo de Pago</SheetTitle>
-              <SheetDescription>{receiptPayment?.receipt?.receiptNumber}</SheetDescription>
+              <SheetDescription>
+                {isReceiptLoading ? "Cargando..." : receipt?.receiptNumber ?? "Sin recibo"}
+              </SheetDescription>
             </SheetHeader>
+
             {receiptPayment && (
               <div className="mt-6 space-y-6">
                 <div className="space-y-4">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Fecha:</span>
-                    <span>{formatDateDO(receiptPayment.paymentDate)}</span>
+                    <span>{formatDateDO(receipt?.receiptDate ?? receiptPayment.paymentDate)}</span>
                   </div>
+
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Cliente:</span>
-                    <span className="font-medium">{receiptPayment.invoice?.client?.companyName}</span>
+                    <span className="font-medium">{receiptPayment.clientName}</span>
                   </div>
+
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Factura:</span>
-                    <span>{receiptPayment.invoice?.ncf}</span>
+                    <span>{firstInvoice?.invoiceNumber ?? "-"}</span>
                   </div>
+
                   <Separator />
+
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Método:</span>
-                    <span>{getPaymentMethodLabel(receiptPayment.paymentMethod)}</span>
+                    <span>{getPaymentMethodLabel(receiptPayment.paymentTypeCode)}</span>
                   </div>
+
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Referencia:</span>
                     <span>{receiptPayment.reference || "-"}</span>
                   </div>
+
                   <Separator />
+
                   <div className="flex justify-between text-lg font-bold">
                     <span>Monto:</span>
                     <MoneyDisplay amount={receiptPayment.amount} className="text-emerald-600" />
                   </div>
                 </div>
-                <Button className="w-full">Imprimir Recibo</Button>
+
+                <Button className="w-full" disabled={!receipt || isReceiptLoading}>
+                  Imprimir Recibo
+                </Button>
               </div>
             )}
           </SheetContent>
@@ -10103,620 +10151,348 @@ export function ContractTable({
 
 "use client"
 
-import { TableCell } from "@/components/ui/table"
-
-import { TableBody } from "@/components/ui/table"
-
-import { TableHead } from "@/components/ui/table"
-
-import { TableRow } from "@/components/ui/table"
-
-import { TableHeader } from "@/components/ui/table"
-
-import { Table } from "@/components/ui/table"
-
-import { useState } from "react"
-import { useForm, useFieldArray } from "react-hook-form"
+import { useMemo, useState } from "react"
+import { useFieldArray, useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
+import { Check, ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react"
+
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Separator } from "@/components/ui/separator"
-import { Check, ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { contractSchema, type ContractFormData } from "@/lib/validations/business"
-import { ClientSelector } from "../common/client-selector"
-import { ServiceSelector } from "../common/service-selector"
-import { CurrencyInput } from "../common/currency-input"
-import { MoneyDisplay } from "../common/money-display"
-import { calculateITBIS, calculateSubtotal, calculateTotal } from "@/lib/utils/business"
+
+import { createContractSchema, type CreateContractFormData } from "@/lib/validations/business"
+import type { BillingFrequency } from "@/lib/types/business"
+
+import { ClientSelector } from "@/components/business/common/client-selector"
+import { ServiceSelector } from "@/components/business/common/service-selector"
+import { CurrencyInput } from "@/components/business/common/currency-input"
+import { MoneyDisplay } from "@/components/business/common/money-display"
 
 interface ContractWizardProps {
-  onSubmit: (data: ContractFormData) => Promise<void>
+  onSubmit: (data: CreateContractFormData) => Promise<void>
   onCancel: () => void
   isLoading?: boolean
 }
 
-const steps = [
-  { id: 1, name: "Cliente", description: "Seleccionar cliente" },
-  { id: 2, name: "Servicios", description: "Agregar líneas de servicio" },
-  { id: 3, name: "Términos", description: "Definir condiciones" },
-  { id: 4, name: "Revisión", description: "Confirmar contrato" },
+const BILLING_FREQUENCIES: { value: BillingFrequency; label: string }[] = [
+  { value: "WEEKLY", label: "Semanal" },
+  { value: "BIWEEKLY", label: "Quincenal" },
+  { value: "MONTHLY", label: "Mensual" },
+  { value: "QUARTERLY", label: "Trimestral" },
+  { value: "ANNUALLY", label: "Anual" },
+  { value: "ONE_TIME", label: "Una vez" },
 ]
 
 export function ContractWizard({ onSubmit, onCancel, isLoading }: ContractWizardProps) {
   const [currentStep, setCurrentStep] = useState(1)
 
-  const form = useForm<ContractFormData>({
-    resolver: zodResolver(contractSchema),
+  const form = useForm<CreateContractFormData>({
+    resolver: zodResolver(createContractSchema),
     defaultValues: {
       clientId: "",
-      contractType: "fixed",
       startDate: new Date().toISOString().split("T")[0],
       endDate: "",
-      autoRenew: true,
-      renewalNoticeDays: 30,
-      billingDay: 1,
-      paymentTermDays: 30,
-      lines: [],
+      billingFrequency: "MONTHLY",
+      billingDayOfMonth: 1,
+      terms: "",
       notes: "",
+      lines: [
+        {
+          serviceId: "",
+          quantity: 1,
+          billingUnitId: undefined,
+          manualUnitPrice: 0,
+          itbisApplicable: true,
+          scheduleNotes: "",
+        },
+      ],
     },
+    mode: "onChange",
   })
 
-  const { fields, append, remove } = useFieldArray({
+  const { fields, append, remove, update } = useFieldArray({
     control: form.control,
     name: "lines",
   })
 
   const watchLines = form.watch("lines")
-  const subtotal = calculateSubtotal(watchLines.map((l) => ({ ...l, subtotal: l.quantity * l.unitPrice })))
-  const itbis = calculateITBIS(
-    watchLines.map((l) => ({
-      ...l,
-      subtotal: l.quantity * l.unitPrice,
-      itbisAmount: l.applyItbis ? l.quantity * l.unitPrice * 0.18 : 0,
-    })),
-  )
-  const total = calculateTotal(subtotal, itbis)
+  const watchBillingFrequency = form.watch("billingFrequency")
 
-  const nextStep = async () => {
-    let fieldsToValidate: (keyof ContractFormData)[] = []
+  const totals = useMemo(() => {
+    const subtotal = (watchLines ?? []).reduce((sum, l) => {
+      const qty = Number(l.quantity || 0)
+      const price = Number(l.manualUnitPrice ?? 0)
+      return sum + qty * price
+    }, 0)
 
-    switch (currentStep) {
-      case 1:
-        fieldsToValidate = ["clientId"]
-        break
-      case 2:
-        fieldsToValidate = ["lines"]
-        break
-      case 3:
-        fieldsToValidate = ["startDate", "billingDay", "paymentTermDays"]
-        break
+    const itbis = (watchLines ?? []).reduce((sum, l) => {
+      if (!l.itbisApplicable) return sum
+      const qty = Number(l.quantity || 0)
+      const price = Number(l.manualUnitPrice ?? 0)
+      return sum + qty * price * 0.18
+    }, 0)
+
+    return { subtotal, itbis, total: subtotal + itbis }
+  }, [watchLines])
+
+  async function nextStep() {
+    // Step validation gates
+    if (currentStep === 1) {
+      const ok = await form.trigger(["clientId", "startDate", "billingFrequency", "billingDayOfMonth"])
+      if (!ok) return
     }
-
-    const isValid = await form.trigger(fieldsToValidate)
-    if (isValid) {
-      setCurrentStep((prev) => Math.min(prev + 1, 4))
+    if (currentStep === 2) {
+      const ok = await form.trigger(["lines"])
+      if (!ok) return
     }
+    setCurrentStep((s) => Math.min(3, s + 1))
   }
 
-  const prevStep = () => {
-    setCurrentStep((prev) => Math.max(prev - 1, 1))
+  function prevStep() {
+    setCurrentStep((s) => Math.max(1, s - 1))
   }
 
-  const handleSubmit = form.handleSubmit(async (data) => {
-    await onSubmit(data)
-  })
-
-  const addServiceLine = () => {
+  function addLine() {
     append({
       serviceId: "",
-      description: "",
       quantity: 1,
-      unitPrice: 0,
-      applyItbis: true,
+      billingUnitId: undefined,
+      manualUnitPrice: 0,
+      itbisApplicable: true,
+      scheduleNotes: "",
     })
   }
 
   return (
     <div className="space-y-6">
-      {/* Step Indicator */}
-      <nav aria-label="Progreso">
-        <ol className="flex items-center">
-          {steps.map((step, index) => (
-            <li key={step.id} className={cn("relative", index !== steps.length - 1 && "flex-1")}>
-              <div className="flex items-center">
-                <span
-                  className={cn(
-                    "flex h-10 w-10 items-center justify-center rounded-full border-2 text-sm font-medium",
-                    step.id < currentStep
-                      ? "border-emerald-600 bg-emerald-600 text-white"
-                      : step.id === currentStep
-                        ? "border-emerald-600 text-emerald-600"
-                        : "border-muted-foreground/25 text-muted-foreground",
-                  )}
+      {/* Steps */}
+      <div className="flex items-center justify-between">
+        <div className={cn("text-sm", currentStep === 1 ? "font-semibold" : "text-muted-foreground")}>
+          1. Datos
+        </div>
+        <div className={cn("text-sm", currentStep === 2 ? "font-semibold" : "text-muted-foreground")}>
+          2. Líneas
+        </div>
+        <div className={cn("text-sm", currentStep === 3 ? "font-semibold" : "text-muted-foreground")}>
+          3. Confirmar
+        </div>
+      </div>
+
+      <Separator />
+
+      <form
+        onSubmit={form.handleSubmit(async (data) => {
+          await onSubmit(data)
+        })}
+        className="space-y-6"
+      >
+        {/* Step 1 */}
+        {currentStep === 1 && (
+          <div className="space-y-4">
+<ClientSelector
+  value={form.watch("clientId")}
+  onValueChange={(clientId) => {
+    form.setValue("clientId", clientId, { shouldValidate: true })
+  }}
+/>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Fecha inicio</label>
+                <Input type="date" {...form.register("startDate")} />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Fecha fin (opcional)</label>
+                <Input type="date" {...form.register("endDate")} />
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Frecuencia de facturación</label>
+                <select
+                  className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                  value={form.watch("billingFrequency")}
+                  onChange={(e) => form.setValue("billingFrequency", e.target.value as BillingFrequency, { shouldValidate: true })}
                 >
-                  {step.id < currentStep ? <Check className="h-5 w-5" /> : step.id}
-                </span>
-                {index !== steps.length - 1 && (
-                  <div
-                    className={cn(
-                      "ml-4 h-0.5 w-full",
-                      step.id < currentStep ? "bg-emerald-600" : "bg-muted-foreground/25",
-                    )}
-                  />
-                )}
+                  {BILLING_FREQUENCIES.map((f) => (
+                    <option key={f.value} value={f.value}>
+                      {f.label}
+                    </option>
+                  ))}
+                </select>
               </div>
-              <div className="mt-2">
-                <span className="text-sm font-medium">{step.name}</span>
-                <p className="text-xs text-muted-foreground">{step.description}</p>
-              </div>
-            </li>
-          ))}
-        </ol>
-      </nav>
 
-      <Form {...form}>
-        <form onSubmit={handleSubmit}>
-          {/* Step 1: Client Selection */}
-          {currentStep === 1 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Seleccionar Cliente</CardTitle>
-                <CardDescription>Seleccione el cliente para este contrato</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="clientId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Cliente *</FormLabel>
-                      <FormControl>
-                        <ClientSelector value={field.value} onChange={field.onChange} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="contractType"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Tipo de Contrato *</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleccionar tipo" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="fixed">Precio Fijo</SelectItem>
-                          <SelectItem value="hourly">Por Hora</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormDescription>
-                        Precio Fijo: tarifa mensual fija. Por Hora: facturación según horas trabajadas.
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Step 2: Service Lines */}
-          {currentStep === 2 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Líneas de Servicio</CardTitle>
-                <CardDescription>Agregue los servicios incluidos en este contrato</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {fields.map((field, index) => (
-                  <div key={field.id} className="rounded-lg border p-4 space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-medium">Línea {index + 1}</h4>
-                      <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <FormField
-                        control={form.control}
-                        name={`lines.${index}.serviceId`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Servicio *</FormLabel>
-                            <FormControl>
-                              <ServiceSelector value={field.value} onChange={field.onChange} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name={`lines.${index}.description`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Descripción</FormLabel>
-                            <FormControl>
-                              <Input {...field} placeholder="Descripción adicional" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name={`lines.${index}.quantity`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Cantidad *</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                min={1}
-                                {...field}
-                                onChange={(e) => field.onChange(Number(e.target.value))}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name={`lines.${index}.unitPrice`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Precio Unitario *</FormLabel>
-                            <FormControl>
-                              <CurrencyInput value={field.value} onChange={field.onChange} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    <FormField
-                      control={form.control}
-                      name={`lines.${index}.applyItbis`}
-                      render={({ field }) => (
-                        <FormItem className="flex items-center justify-between rounded-lg border p-3">
-                          <div className="space-y-0.5">
-                            <FormLabel>Aplicar ITBIS (18%)</FormLabel>
-                            <FormDescription>Incluir impuesto en esta línea</FormDescription>
-                          </div>
-                          <FormControl>
-                            <Switch checked={field.value} onCheckedChange={field.onChange} />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-
-                    <div className="text-right text-sm">
-                      <span className="text-muted-foreground">Subtotal: </span>
-                      <MoneyDisplay amount={(watchLines[index]?.quantity || 0) * (watchLines[index]?.unitPrice || 0)} />
-                    </div>
-                  </div>
-                ))}
-
-                <Button type="button" variant="outline" onClick={addServiceLine} className="w-full bg-transparent">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Agregar Línea
-                </Button>
-
-                {fields.length > 0 && (
-                  <>
-                    <Separator />
-                    <div className="space-y-2 text-right">
-                      <div className="flex justify-end gap-4">
-                        <span className="text-muted-foreground">Subtotal:</span>
-                        <MoneyDisplay amount={subtotal} className="font-medium" />
-                      </div>
-                      <div className="flex justify-end gap-4">
-                        <span className="text-muted-foreground">ITBIS (18%):</span>
-                        <MoneyDisplay amount={itbis} className="font-medium" />
-                      </div>
-                      <div className="flex justify-end gap-4 text-lg">
-                        <span className="font-semibold">Total Mensual:</span>
-                        <MoneyDisplay amount={total} className="font-bold text-emerald-600" />
-                      </div>
-                    </div>
-                  </>
-                )}
-
-                {form.formState.errors.lines && (
-                  <p className="text-sm text-destructive">
-                    {form.formState.errors.lines.message || "Debe agregar al menos una línea de servicio"}
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Step 3: Contract Terms */}
-          {currentStep === 3 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Términos del Contrato</CardTitle>
-                <CardDescription>Configure las condiciones de vigencia y facturación</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <FormField
-                    control={form.control}
-                    name="startDate"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Fecha de Inicio *</FormLabel>
-                        <FormControl>
-                          <Input type="date" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="endDate"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Fecha de Fin</FormLabel>
-                        <FormControl>
-                          <Input type="date" {...field} />
-                        </FormControl>
-                        <FormDescription>Dejar vacío para contrato indefinido</FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+              {watchBillingFrequency !== "ONE_TIME" && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Día del mes (si aplica)</label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={31}
+                    value={form.watch("billingDayOfMonth") ?? 1}
+                    onChange={(e) => form.setValue("billingDayOfMonth", Number(e.target.value), { shouldValidate: true })}
                   />
                 </div>
-
-                <FormField
-                  control={form.control}
-                  name="autoRenew"
-                  render={({ field }) => (
-                    <FormItem className="flex items-center justify-between rounded-lg border p-4">
-                      <div className="space-y-0.5">
-                        <FormLabel>Renovación Automática</FormLabel>
-                        <FormDescription>El contrato se renovará automáticamente al vencer</FormDescription>
-                      </div>
-                      <FormControl>
-                        <Switch checked={field.value} onCheckedChange={field.onChange} />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-
-                {form.watch("autoRenew") && (
-                  <FormField
-                    control={form.control}
-                    name="renewalNoticeDays"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Días de Aviso para Renovación</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            min={1}
-                            {...field}
-                            onChange={(e) => field.onChange(Number(e.target.value))}
-                          />
-                        </FormControl>
-                        <FormDescription>Días de anticipación para notificar sobre la renovación</FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
-
-                <Separator />
-
-                <div className="grid gap-4 md:grid-cols-2">
-                  <FormField
-                    control={form.control}
-                    name="billingDay"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Día de Facturación *</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            min={1}
-                            max={28}
-                            {...field}
-                            onChange={(e) => field.onChange(Number(e.target.value))}
-                          />
-                        </FormControl>
-                        <FormDescription>Día del mes en que se genera la factura (1-28)</FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="paymentTermDays"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Días de Crédito *</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            min={0}
-                            {...field}
-                            onChange={(e) => field.onChange(Number(e.target.value))}
-                          />
-                        </FormControl>
-                        <FormDescription>Días para pago después de emitida la factura</FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <FormField
-                  control={form.control}
-                  name="notes"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Notas Internas</FormLabel>
-                      <FormControl>
-                        <Textarea {...field} placeholder="Notas o comentarios sobre este contrato..." rows={3} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Step 4: Review */}
-          {currentStep === 4 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Revisión del Contrato</CardTitle>
-                <CardDescription>Revise los detalles antes de crear el contrato</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid gap-6 md:grid-cols-2">
-                  <div className="space-y-4">
-                    <h4 className="font-semibold">Información General</h4>
-                    <dl className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <dt className="text-muted-foreground">Tipo de Contrato:</dt>
-                        <dd className="font-medium">
-                          {form.watch("contractType") === "fixed" ? "Precio Fijo" : "Por Hora"}
-                        </dd>
-                      </div>
-                      <div className="flex justify-between">
-                        <dt className="text-muted-foreground">Fecha de Inicio:</dt>
-                        <dd className="font-medium">{form.watch("startDate")}</dd>
-                      </div>
-                      <div className="flex justify-between">
-                        <dt className="text-muted-foreground">Fecha de Fin:</dt>
-                        <dd className="font-medium">{form.watch("endDate") || "Indefinido"}</dd>
-                      </div>
-                      <div className="flex justify-between">
-                        <dt className="text-muted-foreground">Renovación Automática:</dt>
-                        <dd className="font-medium">{form.watch("autoRenew") ? "Sí" : "No"}</dd>
-                      </div>
-                    </dl>
-                  </div>
-
-                  <div className="space-y-4">
-                    <h4 className="font-semibold">Facturación</h4>
-                    <dl className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <dt className="text-muted-foreground">Día de Facturación:</dt>
-                        <dd className="font-medium">{form.watch("billingDay")}</dd>
-                      </div>
-                      <div className="flex justify-between">
-                        <dt className="text-muted-foreground">Días de Crédito:</dt>
-                        <dd className="font-medium">{form.watch("paymentTermDays")}</dd>
-                      </div>
-                    </dl>
-                  </div>
-                </div>
-
-                <Separator />
-
-                <div className="space-y-4">
-                  <h4 className="font-semibold">Líneas de Servicio ({fields.length})</h4>
-                  <div className="rounded-lg border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Servicio</TableHead>
-                          <TableHead className="text-right">Cantidad</TableHead>
-                          <TableHead className="text-right">Precio Unit.</TableHead>
-                          <TableHead className="text-right">ITBIS</TableHead>
-                          <TableHead className="text-right">Subtotal</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {watchLines.map((line, index) => (
-                          <TableRow key={index}>
-                            <TableCell>{line.description || `Servicio ${index + 1}`}</TableCell>
-                            <TableCell className="text-right">{line.quantity}</TableCell>
-                            <TableCell className="text-right">
-                              <MoneyDisplay amount={line.unitPrice} />
-                            </TableCell>
-                            <TableCell className="text-right">{line.applyItbis ? "18%" : "N/A"}</TableCell>
-                            <TableCell className="text-right">
-                              <MoneyDisplay amount={line.quantity * line.unitPrice} />
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </div>
-
-                <div className="flex justify-end">
-                  <div className="w-64 space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Subtotal:</span>
-                      <MoneyDisplay amount={subtotal} />
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">ITBIS (18%):</span>
-                      <MoneyDisplay amount={itbis} />
-                    </div>
-                    <Separator />
-                    <div className="flex justify-between text-lg font-bold">
-                      <span>Total Mensual:</span>
-                      <MoneyDisplay amount={total} className="text-emerald-600" />
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Navigation Buttons */}
-          <div className="flex justify-between pt-6">
-            <Button type="button" variant="outline" onClick={onCancel}>
-              Cancelar
-            </Button>
-            <div className="flex gap-2">
-              {currentStep > 1 && (
-                <Button type="button" variant="outline" onClick={prevStep}>
-                  <ChevronLeft className="mr-2 h-4 w-4" />
-                  Anterior
-                </Button>
-              )}
-              {currentStep < 4 ? (
-                <Button type="button" onClick={nextStep}>
-                  Siguiente
-                  <ChevronRight className="ml-2 h-4 w-4" />
-                </Button>
-              ) : (
-                <Button type="submit" disabled={isLoading}>
-                  {isLoading ? "Creando..." : "Crear Contrato"}
-                </Button>
               )}
             </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Términos (opcional)</label>
+              <Textarea rows={3} {...form.register("terms")} />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Notas (opcional)</label>
+              <Textarea rows={3} {...form.register("notes")} />
+            </div>
           </div>
-        </form>
-      </Form>
+        )}
+
+        {/* Step 2 */}
+        {currentStep === 2 && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold">Servicios</h3>
+              <Button type="button" variant="outline" onClick={addLine}>
+                <Plus className="mr-2 h-4 w-4" />
+                Agregar línea
+              </Button>
+            </div>
+
+            <div className="space-y-4">
+              {fields.map((field, idx) => {
+                const line = watchLines?.[idx]
+                return (
+                  <div key={field.id} className="rounded-lg border p-4 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm font-medium">Línea #{idx + 1}</div>
+                      {fields.length > 1 && (
+                        <Button type="button" variant="ghost" onClick={() => remove(idx)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+
+<ServiceSelector
+  value={line?.serviceId ?? ""}
+  onValueChange={(serviceId, service) => {
+                        // Keep whatever your ServiceSelector provides; set safe defaults
+                        update(idx, {
+                          ...line,
+                          serviceId,
+                          billingUnitId: service?.billingUnitId ?? line?.billingUnitId,
+                          itbisApplicable: service?.itbisApplicable ?? (line?.itbisApplicable ?? true),
+                        } as any)
+                      }}
+                    />
+
+                    <div className="grid gap-4 md:grid-cols-3">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Cantidad</label>
+                        <Input
+                          type="number"
+                          min={1}
+                          value={line?.quantity ?? 1}
+                          onChange={(e) => {
+                            const quantity = Math.max(1, Number(e.target.value || 1))
+                            update(idx, { ...line, quantity } as any)
+                          }}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Precio unitario (manual)</label>
+                        <CurrencyInput
+                          value={Number(line?.manualUnitPrice ?? 0)}
+                          onChange={(value) => update(idx, { ...line, manualUnitPrice: value } as any)}
+                        />
+                      </div>
+
+                      <div className="flex items-end gap-3">
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            checked={Boolean(line?.itbisApplicable)}
+                            onCheckedChange={(checked) => update(idx, { ...line, itbisApplicable: checked } as any)}
+                          />
+                          <span className="text-sm">ITBIS</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Notas de horario (opcional)</label>
+                      <Input
+                        value={line?.scheduleNotes ?? ""}
+                        onChange={(e) => update(idx, { ...line, scheduleNotes: e.target.value } as any)}
+                      />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Step 3 */}
+        {currentStep === 3 && (
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold flex items-center gap-2">
+              <Check className="h-5 w-5" />
+              Resumen
+            </h3>
+
+            <div className="rounded-lg border p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Subtotal</span>
+                <MoneyDisplay amount={totals.subtotal} />
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">ITBIS (18%)</span>
+                <MoneyDisplay amount={totals.itbis} />
+              </div>
+              <Separator />
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Total</span>
+                <MoneyDisplay amount={totals.total} />
+              </div>
+            </div>
+          </div>
+        )}
+
+        <Separator />
+
+        {/* Footer */}
+        <div className="flex items-center justify-between">
+          <Button type="button" variant="outline" onClick={onCancel}>
+            Cancelar
+          </Button>
+
+          <div className="flex items-center gap-2">
+            {currentStep > 1 && (
+              <Button type="button" variant="outline" onClick={prevStep}>
+                <ChevronLeft className="mr-2 h-4 w-4" />
+                Atrás
+              </Button>
+            )}
+
+            {currentStep < 3 ? (
+              <Button type="button" onClick={nextStep}>
+                Siguiente
+                <ChevronRight className="ml-2 h-4 w-4" />
+              </Button>
+            ) : (
+              <Button type="submit" disabled={isLoading}>
+                {isLoading ? "Guardando..." : "Crear contrato"}
+              </Button>
+            )}
+          </div>
+        </div>
+      </form>
     </div>
   )
 }
@@ -11209,15 +10985,15 @@ export function InvoiceTable({
 
 "use client"
 
+import Link from "next/link"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { MoneyDisplay } from "@/components/business/common/money-display"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { MoreHorizontal, Eye, FileText, Printer } from "lucide-react"
 import type { Payment } from "@/lib/types/business"
-import { MoneyDisplay } from "../common/money-display"
 import { formatDateDO, getPaymentMethodLabel } from "@/lib/utils/business"
-import Link from "next/link"
 
 interface PaymentTableProps {
   payments: Payment[]
@@ -11237,72 +11013,101 @@ export function PaymentTable({ payments, onViewReceipt }: PaymentTableProps) {
             <TableHead>Referencia</TableHead>
             <TableHead className="text-right">Monto</TableHead>
             <TableHead>Recibo</TableHead>
-            <TableHead className="w-12"></TableHead>
+            <TableHead className="w-12" />
           </TableRow>
         </TableHeader>
+
         <TableBody>
-          {payments.map((payment) => (
-            <TableRow key={payment.id}>
-              <TableCell>{formatDateDO(payment.paymentDate)}</TableCell>
-              <TableCell>
-                <div>
-                  <p className="font-medium">{payment.invoice?.client?.companyName}</p>
-                </div>
-              </TableCell>
-              <TableCell>
-                <Link
-                  href={`/business/invoices/${payment.invoiceId}`}
-                  className="text-emerald-600 hover:underline text-sm"
-                >
-                  {payment.invoice?.ncf || payment.invoice?.invoiceNumber}
-                </Link>
-              </TableCell>
-              <TableCell>
-                <Badge variant="outline">{getPaymentMethodLabel(payment.paymentMethod)}</Badge>
-              </TableCell>
-              <TableCell className="text-sm text-muted-foreground">{payment.reference || "-"}</TableCell>
-              <TableCell className="text-right">
-                <MoneyDisplay amount={payment.amount} className="font-medium text-emerald-600" />
-              </TableCell>
-              <TableCell>
-                {payment.receipt ? (
-                  <Button variant="ghost" size="sm" onClick={() => onViewReceipt(payment)}>
-                    {payment.receipt.receiptNumber}
-                  </Button>
-                ) : (
-                  <span className="text-sm text-muted-foreground">-</span>
-                )}
-              </TableCell>
-              <TableCell>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                      <MoreHorizontal className="h-4 w-4" />
-                      <span className="sr-only">Acciones</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem asChild>
-                      <Link href={`/business/invoices/${payment.invoiceId}`}>
-                        <Eye className="mr-2 h-4 w-4" />
-                        Ver Factura
+          {payments.map((payment) => {
+            const firstAllocation = payment.allocations?.[0]
+            const invoicesCount = payment.allocations?.length ?? 0
+
+            return (
+              <TableRow key={payment.id}>
+                <TableCell>{formatDateDO(payment.paymentDate)}</TableCell>
+
+                <TableCell>
+                  <div>
+                    <p className="font-medium">{payment.clientName}</p>
+                    <p className="text-xs text-muted-foreground">{payment.paymentNumber}</p>
+                  </div>
+                </TableCell>
+
+                <TableCell>
+                  {firstAllocation ? (
+                    <div className="flex items-center gap-2">
+                      <Link
+                        href={`/business/invoices/${firstAllocation.invoiceId}`}
+                        className="text-emerald-600 hover:underline text-sm"
+                      >
+                        {firstAllocation.invoiceNumber}
                       </Link>
-                    </DropdownMenuItem>
-                    {payment.receipt && (
+                      {invoicesCount > 1 && (
+                        <Badge variant="secondary" className="text-xs">
+                          +{invoicesCount - 1}
+                        </Badge>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-sm text-muted-foreground">-</span>
+                  )}
+                </TableCell>
+
+                <TableCell>
+                  <Badge variant="outline">{getPaymentMethodLabel(payment.paymentTypeCode)}</Badge>
+                </TableCell>
+
+                <TableCell className="text-sm text-muted-foreground">{payment.reference || "-"}</TableCell>
+
+                <TableCell className="text-right">
+                  <MoneyDisplay amount={payment.amount} className="font-medium text-emerald-600" />
+                </TableCell>
+
+                <TableCell>
+                  <Button variant="ghost" size="sm" onClick={() => onViewReceipt(payment)}>
+                    Ver
+                  </Button>
+                </TableCell>
+
+                <TableCell>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                        <MoreHorizontal className="h-4 w-4" />
+                        <span className="sr-only">Acciones</span>
+                      </Button>
+                    </DropdownMenuTrigger>
+
+                    <DropdownMenuContent align="end">
+                      {firstAllocation ? (
+                        <DropdownMenuItem asChild>
+                          <Link href={`/business/invoices/${firstAllocation.invoiceId}`}>
+                            <Eye className="mr-2 h-4 w-4" />
+                            Ver Factura
+                          </Link>
+                        </DropdownMenuItem>
+                      ) : (
+                        <DropdownMenuItem disabled>
+                          <Eye className="mr-2 h-4 w-4" />
+                          Ver Factura
+                        </DropdownMenuItem>
+                      )}
+
                       <DropdownMenuItem onClick={() => onViewReceipt(payment)}>
                         <FileText className="mr-2 h-4 w-4" />
                         Ver Recibo
                       </DropdownMenuItem>
-                    )}
-                    <DropdownMenuItem>
-                      <Printer className="mr-2 h-4 w-4" />
-                      Imprimir
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </TableCell>
-            </TableRow>
-          ))}
+
+                      <DropdownMenuItem>
+                        <Printer className="mr-2 h-4 w-4" />
+                        Imprimir
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              </TableRow>
+            )
+          })}
         </TableBody>
       </Table>
     </div>
@@ -11862,7 +11667,7 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
 import { CalendarIcon } from "lucide-react"
-import { format } from "date-fns"
+import { format, isValid } from "date-fns"
 import { es } from "date-fns/locale"
 
 import { Button } from "@/components/ui/button"
@@ -11950,7 +11755,11 @@ export function SetPriceDialog({ service, open, onOpenChange, onSuccess }: SetPr
             <p className="text-sm text-muted-foreground">Precio actual</p>
             <p className="text-xl font-bold">{formatDOP(currentPrice.price)}</p>
             <p className="text-xs text-muted-foreground">
-              Vigente desde: {format(new Date(currentPrice.effectiveFrom), "dd/MM/yyyy", { locale: es })}
+              Vigente desde:{" "}
+              {(() => {
+                const d = new Date(currentPrice.effectiveFrom)
+                return isValid(d) ? format(d, "dd/MM/yyyy", { locale: es }) : "-"
+              })()}
             </p>
           </div>
         )}
@@ -12519,19 +12328,65 @@ export function ConfirmDialog({
 
 // ===== FILE: components\common\empty-state.tsx =====
 
-import type React from "react"
-import { cn } from "@/lib/utils"
+"use client"
+
+import React from "react"
+import Link from "next/link"
 import type { LucideIcon } from "lucide-react"
+
+import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
 
 interface EmptyStateProps {
   icon: LucideIcon
   title: string
   description: string
-  action?: React.ReactNode
+  action?: React.ReactNode | EmptyStateAction
   className?: string
 }
+type LinkAction = { label: string; href: string }
+type ClickAction = { label: string; onClick: () => void }
+type EmptyStateAction = LinkAction | ClickAction
+
+function isEmptyStateAction(value: unknown): value is EmptyStateAction {
+  if (!value || typeof value !== "object") return false
+  const v = value as Record<string, unknown>
+
+  const hasLabel = typeof v.label === "string"
+  const hasHref = typeof v.href === "string"
+  const hasOnClick = typeof v.onClick === "function"
+
+  // label + exactly one of href/onClick
+  return hasLabel && ((hasHref && !hasOnClick) || (hasOnClick && !hasHref))
+}
+
 
 export function EmptyState({ icon: Icon, title, description, action, className }: EmptyStateProps) {
+  let actionNode: React.ReactNode = null
+
+  if (action) {
+    if (React.isValidElement(action)) {
+      actionNode = action
+    } else if (isEmptyStateAction(action)) {
+      const button = (
+        <Button onClick={"onClick" in action ? action.onClick : undefined}>
+          {action.label}
+        </Button>
+      )
+
+      if ("href" in action) {
+  actionNode = <Link href={action.href}>{button}</Link>
+} else {
+  actionNode = button
+}
+    } else if (typeof action === "string" || typeof action === "number") {
+      actionNode = <span>{action}</span>
+    } else {
+      // Unknown shape: fail closed (don’t render) instead of crashing the page
+      actionNode = null
+    }
+  }
+
   return (
     <div className={cn("flex flex-col items-center justify-center py-12 text-center", className)}>
       <div className="rounded-full bg-muted p-4">
@@ -12539,7 +12394,7 @@ export function EmptyState({ icon: Icon, title, description, action, className }
       </div>
       <h3 className="mt-4 text-lg font-semibold">{title}</h3>
       <p className="mt-2 max-w-sm text-sm text-muted-foreground">{description}</p>
-      {action && <div className="mt-6">{action}</div>}
+      {actionNode && <div className="mt-6">{actionNode}</div>}
     </div>
   )
 }
@@ -22459,9 +22314,11 @@ return businessApiClient(`${BASE_PATH}/stats`)
 
 // ===== FILE: lib\api\business\contracts.ts =====
 
+// ===== FILE: lib/api/business/contracts.ts =====
 // ===== Business Contracts API =====
 
 import { apiClient } from "../client"
+import { businessApiClient } from "./client"
 import type {
   Contract,
   ContractLine,
@@ -22472,13 +22329,13 @@ import type {
   BusinessApiResponse,
   ContractStatus,
 } from "@/lib/types/business"
-import { businessApiClient } from "./client"
 
 const BASE_PATH = "/api/v1/business/contracts"
 
-/**
- * Get contracts with optional filtering
- */
+// -------------------------------
+// Low-level functions (keep these)
+// -------------------------------
+
 export async function getContracts(
   page = 0,
   size = 20,
@@ -22496,16 +22353,10 @@ export async function getContracts(
   return businessApiClient<BusinessPaginatedResponse<Contract>>(`${BASE_PATH}?${params.toString()}`)
 }
 
-/**
- * Get contract by ID
- */
 export async function getContractById(id: string): Promise<Contract> {
   return businessApiClient<Contract>(`${BASE_PATH}/${id}`)
 }
 
-/**
- * Create a new contract
- */
 export async function createContract(data: CreateContractRequest): Promise<BusinessApiResponse<Contract>> {
   return apiClient<BusinessApiResponse<Contract>>(BASE_PATH, {
     method: "POST",
@@ -22513,9 +22364,6 @@ export async function createContract(data: CreateContractRequest): Promise<Busin
   })
 }
 
-/**
- * Update a contract
- */
 export async function updateContract(id: string, data: UpdateContractRequest): Promise<BusinessApiResponse<Contract>> {
   return apiClient<BusinessApiResponse<Contract>>(`${BASE_PATH}/${id}`, {
     method: "PUT",
@@ -22523,36 +22371,18 @@ export async function updateContract(id: string, data: UpdateContractRequest): P
   })
 }
 
-/**
- * Activate a draft contract
- */
 export async function activateContract(id: string): Promise<BusinessApiResponse<Contract>> {
-  return apiClient<BusinessApiResponse<Contract>>(`${BASE_PATH}/${id}/activate`, {
-    method: "POST",
-  })
+  return apiClient<BusinessApiResponse<Contract>>(`${BASE_PATH}/${id}/activate`, { method: "POST" })
 }
 
-/**
- * Suspend an active contract
- */
 export async function suspendContract(id: string): Promise<BusinessApiResponse<Contract>> {
-  return apiClient<BusinessApiResponse<Contract>>(`${BASE_PATH}/${id}/suspend`, {
-    method: "POST",
-  })
+  return apiClient<BusinessApiResponse<Contract>>(`${BASE_PATH}/${id}/suspend`, { method: "POST" })
 }
 
-/**
- * Terminate a contract
- */
 export async function terminateContract(id: string): Promise<BusinessApiResponse<Contract>> {
-  return apiClient<BusinessApiResponse<Contract>>(`${BASE_PATH}/${id}/terminate`, {
-    method: "POST",
-  })
+  return apiClient<BusinessApiResponse<Contract>>(`${BASE_PATH}/${id}/terminate`, { method: "POST" })
 }
 
-/**
- * Add a line to a contract
- */
 export async function addContractLine(
   contractId: string,
   data: CreateContractLineRequest,
@@ -22563,25 +22393,141 @@ export async function addContractLine(
   })
 }
 
-/**
- * Remove a line from a contract
- */
 export async function removeContractLine(contractId: string, lineId: string): Promise<BusinessApiResponse<null>> {
   return apiClient<BusinessApiResponse<null>>(`${BASE_PATH}/${contractId}/lines/${lineId}`, {
     method: "DELETE",
   })
 }
 
-/**
- * Get contract statistics
- */
-export async function getContractStats(): Promise<{
+export type ContractStats = {
   total: number
   active: number
   draft: number
   expiringSoon: number
-}> {
-return businessApiClient(`${BASE_PATH}/stats`)
+}
+
+export async function getContractStats(): Promise<ContractStats> {
+  return businessApiClient<ContractStats>(`${BASE_PATH}/stats`)
+}
+
+// -------------------------------------
+// UI-friendly adapter (what your page uses)
+// -------------------------------------
+
+type ContractsListParams = {
+  page?: number // UI is 1-based
+  limit?: number
+  search?: string
+  status?: string
+  clientId?: string
+}
+
+type ContractsListResult = {
+  data: Contract[]
+  pagination: {
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+  }
+}
+
+function normalizeContractStatus(status?: string): ContractStatus | undefined {
+  if (!status) return undefined
+  const s = status.trim()
+  if (!s) return undefined
+
+  const upper = s.toUpperCase()
+
+  const map: Record<string, ContractStatus> = {
+    DRAFT: "DRAFT",
+    ACTIVE: "ACTIVE",
+    SUSPENDED: "SUSPENDED",
+    TERMINATED: "TERMINATED",
+    EXPIRED: "EXPIRED",
+
+    // common UI aliases
+    CANCELLED: "TERMINATED",
+    CANCELED: "TERMINATED",
+  }
+
+  return map[upper]
+}
+
+function unwrapOrThrow<T>(res: BusinessApiResponse<T>): T {
+  if (!res?.success) throw new Error(res?.message || "Request failed")
+  return res.data as T
+}
+
+export const contractsApi = {
+  async getAll(params: ContractsListParams = {}): Promise<ContractsListResult> {
+    const page = params.page ?? 1
+    const limit = params.limit ?? 10
+    const page0 = Math.max(0, page - 1)
+
+    const status = normalizeContractStatus(params.status)
+
+    const paged = await getContracts(page0, limit, params.clientId, status)
+
+    let rows = Array.isArray(paged.content) ? paged.content : []
+
+    // NOTE: backend paging happens first; this filters only the returned page.
+    const q = (params.search ?? "").trim().toLowerCase()
+    if (q) {
+      rows = rows.filter((c) => {
+        return (
+          c.contractNumber?.toLowerCase().includes(q) ||
+          c.clientName?.toLowerCase().includes(q) ||
+          c.clientId?.toLowerCase().includes(q) ||
+          c.id?.toLowerCase().includes(q)
+        )
+      })
+    }
+
+    return {
+      data: rows,
+      pagination: {
+        page: paged.number + 1,
+        limit: paged.size,
+        total: paged.totalElements,
+        totalPages: paged.totalPages,
+      },
+    }
+  },
+
+  getById: getContractById,
+
+  async create(data: CreateContractRequest): Promise<Contract> {
+    return unwrapOrThrow(await createContract(data))
+  },
+
+  async update(id: string, data: UpdateContractRequest): Promise<Contract> {
+    return unwrapOrThrow(await updateContract(id, data))
+  },
+
+  async activate(id: string): Promise<Contract> {
+    return unwrapOrThrow(await activateContract(id))
+  },
+
+  async suspend(id: string): Promise<Contract> {
+    return unwrapOrThrow(await suspendContract(id))
+  },
+
+  // UI calls it "cancel", backend endpoint is terminate
+  async cancel(id: string): Promise<Contract> {
+    return unwrapOrThrow(await terminateContract(id))
+  },
+
+  async addLine(contractId: string, data: CreateContractLineRequest): Promise<ContractLine> {
+    return unwrapOrThrow(await addContractLine(contractId, data))
+  },
+
+  async removeLine(contractId: string, lineId: string): Promise<void> {
+    const res = await removeContractLine(contractId, lineId)
+    if (!res?.success) throw new Error(res?.message || "Failed to remove contract line")
+  },
+
+  getStats: getContractStats,
 }
 
 // ===== FILE: lib\api\business\dashboard.ts =====
@@ -22730,7 +22676,7 @@ export async function getInvoiceStats(): Promise<{
 
 // ===== Business Payments API =====
 
-import { apiClient } from "../client"
+import { apiClient, businessApiClient } from "./client"
 import type {
   Payment,
   PaymentType,
@@ -22747,21 +22693,16 @@ const BASE_PATH = "/api/v1/business/payments"
  * Get payments with optional filtering
  */
 export async function getPayments(page = 0, size = 20, clientId?: string): Promise<BusinessPaginatedResponse<Payment>> {
-  const params = new URLSearchParams({
-    page: page.toString(),
-    size: size.toString(),
-  })
-
+  const params = new URLSearchParams({ page: String(page), size: String(size) })
   if (clientId) params.append("clientId", clientId)
-
-  return apiClient<BusinessPaginatedResponse<Payment>>(`${BASE_PATH}?${params.toString()}`)
+  return businessApiClient<BusinessPaginatedResponse<Payment>>(`${BASE_PATH}?${params.toString()}`)
 }
 
 /**
  * Get payment by ID
  */
 export async function getPaymentById(id: string): Promise<Payment> {
-  return apiClient<Payment>(`${BASE_PATH}/${id}`)
+  return businessApiClient<Payment>(`${BASE_PATH}/${id}`)
 }
 
 /**
@@ -22836,11 +22777,81 @@ export async function getPaymentStats(): Promise<{
   fullyAllocated: number
   unallocated: number
 }> {
-  return apiClient<{
+  return businessApiClient<{
     totalReceived: number
     fullyAllocated: number
     unallocated: number
   }>(`${BASE_PATH}/stats`)
+}
+
+type PaymentsListParams = {
+  search?: string
+  paymentMethod?: "all" | "transfer" | "check" | "cash" | "card" | string
+  clientId?: string
+  page?: number // UI is 1-based
+  limit?: number
+}
+
+type PaymentsListResult = {
+  data: Payment[]
+  pagination: {
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+  }
+}
+
+export const paymentsApi = {
+  async getAll(params: PaymentsListParams = {}): Promise<PaymentsListResult> {
+    const page = params.page ?? 1
+    const limit = params.limit ?? 10
+    const page0 = Math.max(0, page - 1)
+
+    // Attempt server-side filtering if supported; harmless if ignored by backend.
+    const qs = new URLSearchParams({
+      page: String(page0),
+      size: String(limit),
+    })
+    if (params.clientId) qs.append("clientId", params.clientId)
+    if (params.search?.trim()) qs.append("search", params.search.trim())
+    if (params.paymentMethod && params.paymentMethod !== "all") qs.append("paymentMethod", params.paymentMethod)
+
+    const paged = await businessApiClient<BusinessPaginatedResponse<Payment>>(`${BASE_PATH}?${qs.toString()}`)
+
+    let rows = Array.isArray(paged.content) ? paged.content : []
+
+    // Fallback client-side filtering on the returned page (keeps UI stable even if backend ignores params)
+    const q = params.search?.trim().toLowerCase()
+    if (q) {
+      rows = rows.filter((p) => {
+        return (
+          p.clientName?.toLowerCase().includes(q) ||
+          p.paymentNumber?.toLowerCase().includes(q) ||
+          (p.reference ?? "").toLowerCase().includes(q)
+        )
+      })
+    }
+
+    const method = params.paymentMethod
+    if (method && method !== "all") {
+      rows = rows.filter((p) => {
+        const code = (p.paymentTypeCode ?? "").toLowerCase()
+        const name = (p.paymentTypeName ?? "").toLowerCase()
+        return code === method.toLowerCase() || name.includes(method.toLowerCase())
+      })
+    }
+
+    return {
+      data: rows,
+      pagination: {
+        page: paged.number + 1,
+        limit: paged.size,
+        total: paged.totalElements,
+        totalPages: paged.totalPages,
+      },
+    }
+  },
 }
 
 // ===== FILE: lib\api\business\pricing.ts =====
@@ -22876,14 +22887,26 @@ export async function setGlobalPrice(data: SetGlobalPriceRequest): Promise<Busin
  * Get current global price for a service
  */
 export async function getGlobalPrice(serviceId: string): Promise<GlobalServicePrice | null> {
-  return apiClient<GlobalServicePrice | null>(`${BASE_PATH}/global/${serviceId}`)
+  try {
+    return await businessApiClient<GlobalServicePrice>(`${BASE_PATH}/global/${serviceId}`)
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : ""
+    if (msg.toLowerCase().includes("no active global price found")) return null
+    throw err
+  }
 }
-
 /**
  * Get global price history for a service
  */
 export async function getGlobalPriceHistory(serviceId: string): Promise<GlobalServicePrice[]> {
-  return apiClient<GlobalServicePrice[]>(`${BASE_PATH}/global/${serviceId}/history`)
+  try {
+    return await businessApiClient<GlobalServicePrice[]>(`${BASE_PATH}/global/${serviceId}/history`)
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : ""
+    // treat "no history" as empty (adjust to your backend message if different)
+    if (msg.toLowerCase().includes("no") && msg.toLowerCase().includes("history")) return []
+    throw err
+  }
 }
 
 /**
@@ -22908,8 +22931,15 @@ export async function setClientPrice(data: SetClientPriceRequest): Promise<Busin
 /**
  * Get client-specific price for a service
  */
+
 export async function getClientPrice(serviceId: string, clientId: string): Promise<ClientServicePrice | null> {
-  return apiClient<ClientServicePrice | null>(`${BASE_PATH}/client/${serviceId}/${clientId}`)
+  try {
+    return await businessApiClient<ClientServicePrice>(`${BASE_PATH}/client/${serviceId}/${clientId}`)
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : ""
+    if (msg.toLowerCase().includes("no active") && msg.toLowerCase().includes("price")) return null
+    throw err
+  }
 }
 
 /**
@@ -23015,9 +23045,19 @@ export async function listServicesPage(options: {
 /**
  * Get all services (returns array for UI consumption).
  */
+
 export async function getServices(activeOnly = true): Promise<ServiceCatalog[]> {
-  const page = await listServicesPage({ activeOnly, page: 0, size: 1000 })
-  return Array.isArray(page?.content) ? page.content : []
+  const params = new URLSearchParams({
+    page: "0",
+    size: "1000",
+  })
+  if (activeOnly) params.append("activeOnly", "true")
+
+  const page = await businessApiClient<BusinessPaginatedResponse<ServiceCatalog>>(
+    `${BASE_PATH}?${params.toString()}`,
+  )
+
+  return page.content ?? []
 }
 
 /**
@@ -23938,30 +23978,69 @@ export function getBillingFrequencyLabel(frequency: BillingFrequency): string {
 }
 
 // ===== Calculation Helpers =====
+export function calculateITBIS(amount: number, rate?: number): number
+export function calculateITBIS(
+  lines: Array<{
+    subtotal?: number
+    itbisAmount?: number
+    applyItbis?: boolean
+    itbisApplicable?: boolean
+  }>,
+  rate?: number,
+): number
+export function calculateITBIS(
+  amountOrLines:
+    | number
+    | Array<{
+        subtotal?: number
+        itbisAmount?: number
+        applyItbis?: boolean
+        itbisApplicable?: boolean
+      }>,
+  rate = 0.18,
+): number {
+  if (typeof amountOrLines === "number") {
+    return amountOrLines * rate
+  }
 
-/**
- * Calculate ITBIS (Dominican VAT) - default 18%
- */
-export function calculateITBIS(amount: number, rate = 0.18): number {
-  return amount * rate
+  return amountOrLines.reduce((sum, line) => {
+    // If caller already computed itbisAmount, just sum it.
+    if (typeof line.itbisAmount === "number") return sum + line.itbisAmount
+
+    // Otherwise compute from subtotal if ITBIS applies.
+    const eligible = line.applyItbis ?? line.itbisApplicable ?? true
+    const base = typeof line.subtotal === "number" ? line.subtotal : 0
+    return sum + (eligible ? base * rate : 0)
+  }, 0)
 }
 
 /**
- * Calculate line total with optional ITBIS
+ * Sum subtotals from contract/invoice lines.
  */
-export function calculateLineTotal(
-  quantity: number,
-  unitPrice: number,
-  itbisApplicable: boolean,
-  itbisRate = 0.18,
-): { subtotal: number; itbis: number; total: number } {
+export function calculateSubtotal(lines: Array<{ subtotal?: number }>): number {
+  return lines.reduce((sum, l) => sum + (l.subtotal ?? 0), 0)
+}
+
+/**
+ * Total = subtotal + ITBIS
+ */
+export function calculateTotal(subtotal: number, itbis: number): number {
+  return subtotal + itbis
+}
+
+/**
+ * Calculate totals for a single line item
+ */
+export function calculateLineTotal(quantity: number, unitPrice: number, itbisApplicable: boolean): {
+  subtotal: number
+  itbisAmount: number
+  total: number
+} {
   const subtotal = quantity * unitPrice
-  const itbis = itbisApplicable ? calculateITBIS(subtotal, itbisRate) : 0
-  return {
-    subtotal,
-    itbis,
-    total: subtotal + itbis,
-  }
+  const itbisAmount = itbisApplicable ? calculateITBIS(subtotal) : 0
+  const total = subtotal + itbisAmount
+
+  return { subtotal, itbisAmount, total }
 }
 // ===== Payment Method Label Function =====
 
@@ -24258,11 +24337,11 @@ export const setClientPriceSchema = z.object({
 // ===== Contract Validations =====
 
 export const createContractLineSchema = z.object({
-  serviceId: z.string().uuid("Seleccione un servicio"),
-  quantity: z.number().min(0.01, "La cantidad debe ser mayor a 0"),
+  serviceId: z.string().min(1, "Seleccione un servicio"),
+  quantity: z.number().min(0.01, "Cantidad inválida"),
   billingUnitId: z.string().uuid().optional(),
-  manualUnitPrice: z.number().min(0).optional(),
-  itbisApplicable: z.boolean().default(true),
+  manualUnitPrice: z.number().min(0),
+  itbisApplicable: z.boolean(), // <-- REQUIRED (fixes resolver typing)
   scheduleNotes: z.string().max(500).optional(),
 })
 

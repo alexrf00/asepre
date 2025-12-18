@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { LoadingSpinner } from "@/components/common/loading-spinner"
-import { ProtectedRoute } from "@/components/common/protected-route"
+import { PermissionGate } from "@/components/common/permission-gate"
 import { Loader2 } from "lucide-react"
 
 interface BusinessSettings {
@@ -137,7 +137,7 @@ export default function BusinessSettingsPage() {
   }
 
   return (
-    <ProtectedRoute permissions={["BUSINESS_CONFIG_MANAGE"]}>
+<PermissionGate permissions={["business.settings.view"]}>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -325,6 +325,6 @@ export default function BusinessSettingsPage() {
           </TabsContent>
         </Tabs>
       </div>
-    </ProtectedRoute>
+</PermissionGate>
   )
 }

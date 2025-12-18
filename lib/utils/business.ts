@@ -229,30 +229,69 @@ export function getBillingFrequencyLabel(frequency: BillingFrequency): string {
 }
 
 // ===== Calculation Helpers =====
+export function calculateITBIS(amount: number, rate?: number): number
+export function calculateITBIS(
+  lines: Array<{
+    subtotal?: number
+    itbisAmount?: number
+    applyItbis?: boolean
+    itbisApplicable?: boolean
+  }>,
+  rate?: number,
+): number
+export function calculateITBIS(
+  amountOrLines:
+    | number
+    | Array<{
+        subtotal?: number
+        itbisAmount?: number
+        applyItbis?: boolean
+        itbisApplicable?: boolean
+      }>,
+  rate = 0.18,
+): number {
+  if (typeof amountOrLines === "number") {
+    return amountOrLines * rate
+  }
 
-/**
- * Calculate ITBIS (Dominican VAT) - default 18%
- */
-export function calculateITBIS(amount: number, rate = 0.18): number {
-  return amount * rate
+  return amountOrLines.reduce((sum, line) => {
+    // If caller already computed itbisAmount, just sum it.
+    if (typeof line.itbisAmount === "number") return sum + line.itbisAmount
+
+    // Otherwise compute from subtotal if ITBIS applies.
+    const eligible = line.applyItbis ?? line.itbisApplicable ?? true
+    const base = typeof line.subtotal === "number" ? line.subtotal : 0
+    return sum + (eligible ? base * rate : 0)
+  }, 0)
 }
 
 /**
- * Calculate line total with optional ITBIS
+ * Sum subtotals from contract/invoice lines.
  */
-export function calculateLineTotal(
-  quantity: number,
-  unitPrice: number,
-  itbisApplicable: boolean,
-  itbisRate = 0.18,
-): { subtotal: number; itbis: number; total: number } {
+export function calculateSubtotal(lines: Array<{ subtotal?: number }>): number {
+  return lines.reduce((sum, l) => sum + (l.subtotal ?? 0), 0)
+}
+
+/**
+ * Total = subtotal + ITBIS
+ */
+export function calculateTotal(subtotal: number, itbis: number): number {
+  return subtotal + itbis
+}
+
+/**
+ * Calculate totals for a single line item
+ */
+export function calculateLineTotal(quantity: number, unitPrice: number, itbisApplicable: boolean): {
+  subtotal: number
+  itbisAmount: number
+  total: number
+} {
   const subtotal = quantity * unitPrice
-  const itbis = itbisApplicable ? calculateITBIS(subtotal, itbisRate) : 0
-  return {
-    subtotal,
-    itbis,
-    total: subtotal + itbis,
-  }
+  const itbisAmount = itbisApplicable ? calculateITBIS(subtotal) : 0
+  const total = subtotal + itbisAmount
+
+  return { subtotal, itbisAmount, total }
 }
 // ===== Payment Method Label Function =====
 
