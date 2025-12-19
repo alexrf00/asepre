@@ -11,9 +11,9 @@ const _geist = Geist({ subsets: ["latin"] })
 const _geistMono = Geist_Mono({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "RBAC Admin - Role Based Access Control",
-  description: "Enterprise-grade authentication and role-based access control system",
-    generator: 'v0.app'
+  title: "ASEPRE - Sistema de Gestión",
+  description: "Agentes de Seguridad Preventiva - Sistema empresarial de gestión y control de acceso basado en roles",
+  generator: "v0.app",
 }
 
 export default function RootLayout({

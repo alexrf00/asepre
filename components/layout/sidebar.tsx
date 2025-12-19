@@ -1,25 +1,36 @@
-import { 
-  Home, 
-  Users, 
-  Shield, 
-  Settings, 
-  ChevronLeft, 
+"use client"
+
+import type React from "react"
+import Image from "next/image"
+
+import {
+  Home,
+  Users,
+  Shield,
+  ChevronLeft,
   ChevronRight,
   LogOut,
-  User,
-  Activity,
   Mail,
   UserCheck,
+  LayoutDashboard,
+  Package,
+  DollarSign,
+  FileText,
+  Receipt,
+  CreditCard,
+  Briefcase,
+  ChevronDown,
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useState } from "react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Separator } from "@/components/ui/separator"
 import { useAuthStore } from "@/lib/store/auth-store"
 import { PermissionGate } from "@/components/common/permission-gate"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 
 interface SidebarProps {
   isCollapsed: boolean
@@ -61,33 +72,58 @@ const adminNavItems = [
     icon: Mail,
     permissions: ["AUTH_INVITE_LIST", "AUTH_INVITE_READ"],
   },
-  //TODO:
-  // {
-  //   title: "Activity Log",
-  //   href: "/activity",
-  //   icon: Activity,
-  //   permissions: ["AUTH_ACTIVITY_READ", "VIEW_ACTIVITY"],
-  // },
 ]
-//TODO:
-// Settings items
-// const settingsNavItems = [
-//   {
-//     title: "Profile",
-//     href: "/profile",
-//     icon: User,
-//   },
-//   {
-//     title: "Settings",
-//     href: "/settings",
-//     icon: Settings,
-//   },
-// ]
+
+const businessNavItems = [
+  {
+    title: "Dashboard",
+    href: "/business",
+    icon: LayoutDashboard,
+    permissions: [], // Accessible to all authenticated users
+  },
+  {
+    title: "Clients",
+    href: "/business/clients",
+    icon: Users,
+    permissions: ["BUSINESS_CLIENT_READ"],
+  },
+  {
+    title: "Services",
+    href: "/business/services",
+    icon: Package,
+    permissions: ["BUSINESS_SERVICE_READ"],
+  },
+  {
+    title: "Pricing",
+    href: "/business/pricing",
+    icon: DollarSign,
+    permissions: ["BUSINESS_PRICE_READ"],
+  },
+  {
+    title: "Contracts",
+    href: "/business/contracts",
+    icon: FileText,
+    permissions: ["BUSINESS_CONTRACT_READ"],
+  },
+  {
+    title: "Invoices",
+    href: "/business/invoices",
+    icon: Receipt,
+    permissions: ["BUSINESS_INVOICE_READ"],
+  },
+  {
+    title: "Payments",
+    href: "/business/payments",
+    icon: CreditCard,
+    permissions: ["BUSINESS_PAYMENT_READ"],
+  },
+]
 
 export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
   const pathname = usePathname()
   const logout = useAuthStore((state) => state.logout)
   const user = useAuthStore((state) => state.user)
+  const [businessOpen, setBusinessOpen] = useState(pathname.startsWith("/business"))
 
   const NavItem = ({
     item,
@@ -100,10 +136,8 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
       href={item.href}
       className={cn(
         "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
-        isActive
-          ? "bg-primary/10 text-primary"
-          : "text-muted-foreground hover:bg-muted hover:text-foreground",
-        isCollapsed && "justify-center px-2"
+        isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground",
+        isCollapsed && "justify-center px-2",
       )}
     >
       <item.icon className="h-4 w-4 shrink-0" />
@@ -115,30 +149,19 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
     <aside
       className={cn(
         "flex h-full flex-col border-r border-border bg-card transition-all duration-300",
-        isCollapsed ? "w-16" : "w-64"
+        isCollapsed ? "w-16" : "w-64",
       )}
     >
       {/* Header */}
       <div className="flex h-16 items-center justify-between px-4 border-b border-border">
         {!isCollapsed && (
           <Link href="/dashboard" className="flex items-center gap-2">
-            <div className="rounded-lg bg-primary p-1.5">
-              <Shield className="h-5 w-5 text-primary-foreground" />
-            </div>
-            <span className="font-bold">ASEPRE SUITE</span>
+            <Image src="/images/asepre-logo.png" alt="ASEPRE" width={36} height={36} className="object-contain" />
+            <span className="font-bold">ASEPRE</span>
           </Link>
         )}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onToggle}
-          className={cn(isCollapsed && "mx-auto")}
-        >
-          {isCollapsed ? (
-            <ChevronRight className="h-4 w-4" />
-          ) : (
-            <ChevronLeft className="h-4 w-4" />
-          )}
+        <Button variant="ghost" size="icon" onClick={onToggle} className={cn(isCollapsed && "mx-auto")}>
+          {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
         </Button>
       </div>
 
@@ -148,25 +171,57 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
           {/* Main */}
           <div className="space-y-1">
             {!isCollapsed && (
-              <p className="px-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Main
-              </p>
+              <p className="px-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Main</p>
             )}
             {mainNavItems.map((item) => (
-              <NavItem
-                key={item.href}
-                item={item}
-                isActive={pathname === item.href}
-              />
+              <NavItem key={item.href} item={item} isActive={pathname === item.href} />
             ))}
+          </div>
+
+          <div className="space-y-1">
+            {!isCollapsed ? (
+              <Collapsible open={businessOpen} onOpenChange={setBusinessOpen}>
+                <CollapsibleTrigger asChild>
+                  <button className="flex w-full items-center justify-between px-3 py-1 text-xs font-medium text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors">
+                    <span className="flex items-center gap-2">
+                      <Briefcase className="h-3 w-3" />
+                      Business
+                    </span>
+                    <ChevronDown className={cn("h-3 w-3 transition-transform", businessOpen && "rotate-180")} />
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-1 pt-1">
+                  {businessNavItems.map((item) =>
+                    item.permissions.length > 0 ? (
+                      <PermissionGate key={item.href} permissions={item.permissions}>
+                        <NavItem item={item} isActive={pathname === item.href} />
+                      </PermissionGate>
+                    ) : (
+                      <NavItem key={item.href} item={item} isActive={pathname === item.href} />
+                    ),
+                  )}
+                </CollapsibleContent>
+              </Collapsible>
+            ) : (
+              // When collapsed, show just the Business icon that links to dashboard
+              <Link
+                href="/business"
+                className={cn(
+                  "flex items-center justify-center rounded-lg px-2 py-2 text-sm transition-colors",
+                  pathname.startsWith("/business")
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                )}
+              >
+                <Briefcase className="h-4 w-4 shrink-0" />
+              </Link>
+            )}
           </div>
 
           {/* Administration */}
           <div className="space-y-1">
             {!isCollapsed && (
-              <p className="px-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Administration
-              </p>
+              <p className="px-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Administration</p>
             )}
             {adminNavItems.map((item) => (
               <PermissionGate key={item.href} permissions={item.permissions}>
@@ -174,23 +229,6 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
               </PermissionGate>
             ))}
           </div>
-
-          {/* Settings */}
-          {/*TODO: }
-          {/* <div className="space-y-1">
-            {!isCollapsed && (
-              <p className="px-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Settings
-              </p>
-            )}
-            {settingsNavItems.map((item) => (
-              <NavItem
-                key={item.href}
-                item={item}
-                isActive={pathname === item.href}
-              />
-            ))}
-          </div> */}
         </nav>
       </ScrollArea>
 
@@ -200,7 +238,7 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
           variant="ghost"
           className={cn(
             "w-full justify-start gap-3 text-muted-foreground hover:text-foreground",
-            isCollapsed && "justify-center px-2"
+            isCollapsed && "justify-center px-2",
           )}
           onClick={logout}
         >

@@ -10,11 +10,7 @@ import { RoleBadge } from "@/components/common/role-badge"
 import { PermissionGate } from "@/components/common/permission-gate"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import {
-  getDashboardSummary,
-  type DashboardStats,
-  type ActivityItem as ActivityItemType,
-} from "@/lib/api/dashboard"
+import { getDashboardSummary, type DashboardStats, type ActivityItem as ActivityItemType } from "@/lib/api/dashboard"
 
 export default function DashboardPage() {
   const user = useAuthStore((state) => state.user)
@@ -24,7 +20,7 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null)
   const [refreshing, setRefreshing] = useState(false)
 
-  const fetchDashboardData = useCallback(async (isRefresh: boolean = false) => {
+  const fetchDashboardData = useCallback(async (isRefresh = false) => {
     try {
       if (isRefresh) {
         setRefreshing(true)
@@ -51,9 +47,12 @@ export default function DashboardPage() {
 
   // Auto-refresh every 5 minutes
   useEffect(() => {
-    const interval = setInterval(() => {
-      fetchDashboardData(true)
-    }, 5 * 60 * 1000)
+    const interval = setInterval(
+      () => {
+        fetchDashboardData(true)
+      },
+      5 * 60 * 1000,
+    )
 
     return () => clearInterval(interval)
   }, [fetchDashboardData])
@@ -88,8 +87,8 @@ export default function DashboardPage() {
       {/* Welcome Section */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Welcome back, {user?.firstName}!</h1>
-          <p className="text-muted-foreground">{"Here's what's happening with your RBAC system today."}</p>
+          <h1 className="text-3xl font-bold tracking-tight">Bienvenido, {user?.firstName}!</h1>
+          <p className="text-muted-foreground">{"Aquí está el resumen de tu sistema ASEPRE."}</p>
         </div>
         <div className="flex items-center gap-3">
           <Button
@@ -222,9 +221,7 @@ export default function DashboardPage() {
                 ))}
               </div>
             ) : (
-              <div className="flex h-32 items-center justify-center text-muted-foreground">
-                No recent activity
-              </div>
+              <div className="flex h-32 items-center justify-center text-muted-foreground">No recent activity</div>
             )}
           </CardContent>
         </Card>

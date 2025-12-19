@@ -1,5 +1,5 @@
 import type React from "react"
-import { Shield } from "lucide-react"
+import Image from "next/image"
 import Link from "next/link"
 
 export default function AuthLayout({
@@ -11,25 +11,26 @@ export default function AuthLayout({
     <div className="flex min-h-screen">
       {/* Left side - Branding */}
       <div className="hidden lg:flex lg:w-1/2 bg-card border-r border-border flex-col justify-between p-10">
-        <Link href="/" className="flex items-center gap-2">
-          <div className="rounded-lg bg-primary p-2">
-            <Shield className="h-6 w-6 text-primary-foreground" />
+        <Link href="/" className="flex items-center gap-3">
+          <Image src="/images/asepre-logo.png" alt="ASEPRE" width={56} height={56} className="object-contain" />
+          <div>
+            <span className="text-xl font-bold">ASEPRE</span>
+            <p className="text-xs text-muted-foreground">Agentes de Seguridad Preventiva</p>
           </div>
-          <span className="text-xl font-bold">RBAC Admin</span>
         </Link>
 
         <div className="space-y-6">
           <blockquote className="space-y-2">
             <p className="text-lg text-muted-foreground leading-relaxed">
-              {'"'}Enterprise-grade authentication and role-based access control. Secure your applications with granular
-              permissions and comprehensive audit logging.{'"'}
+              {'"'}Sistema empresarial de gestión integral. Control de acceso basado en roles, facturación y
+              administración de contratos para servicios de seguridad.{'"'}
             </p>
           </blockquote>
 
           <div className="grid grid-cols-3 gap-4">
             <div className="rounded-lg border border-border bg-background/50 p-4">
               <p className="text-2xl font-bold text-primary">256-bit</p>
-              <p className="text-sm text-muted-foreground">Encryption</p>
+              <p className="text-sm text-muted-foreground">Encriptación</p>
             </div>
             <div className="rounded-lg border border-border bg-background/50 p-4">
               <p className="text-2xl font-bold text-primary">RS256</p>
@@ -42,7 +43,7 @@ export default function AuthLayout({
           </div>
         </div>
 
-        <p className="text-sm text-muted-foreground">Secured by enterprise-grade authentication</p>
+        <p className="text-sm text-muted-foreground">Protegido con autenticación de nivel empresarial</p>
       </div>
 
       {/* Right side - Auth forms */}

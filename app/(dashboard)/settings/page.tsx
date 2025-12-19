@@ -158,7 +158,7 @@ export default function SettingsPage() {
               <CardContent className="space-y-6">
                 <div className="space-y-2">
                   <Label htmlFor="appName">Application Name</Label>
-                  <Input id="appName" defaultValue="RBAC Admin" />
+                  <Input id="appName" defaultValue="ASEPRE" />
                 </div>
 
                 <div className="space-y-2">
