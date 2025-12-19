@@ -37,7 +37,6 @@ export function CreateInvoiceDialog({ open, onOpenChange, onSubmit }: CreateInvo
     resolver: zodResolver(createInvoiceSchema),
     defaultValues: {
       clientId: "",
-      contractId: "",
       issueDate: new Date().toISOString().split("T")[0],
       dueDate: "",
       lines: [{ serviceId: "", description: "", quantity: 1, unitPrice: 0, itbisApplicable: true }],
@@ -87,7 +86,7 @@ export function CreateInvoiceDialog({ open, onOpenChange, onSubmit }: CreateInvo
                   <FormItem>
                     <FormLabel>Cliente *</FormLabel>
                     <FormControl>
-                      <ClientSelector value={field.value} onChange={field.onChange} />
+                      <ClientSelector value={field.value} onValueChange={(id) => field.onChange(id)} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -161,7 +160,7 @@ export function CreateInvoiceDialog({ open, onOpenChange, onSubmit }: CreateInvo
                         <FormItem>
                           <FormLabel>Servicio</FormLabel>
                           <FormControl>
-                            <ServiceSelector value={field.value || ""} onChange={field.onChange} />
+                            <ServiceSelector value={field.value} onValueChange={(id) => field.onChange(id)} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>

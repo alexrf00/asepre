@@ -61,7 +61,11 @@ export function SetPriceDialog({ service, open, onOpenChange, onSuccess }: SetPr
   async function handleSubmit(data: SetGlobalPriceFormData) {
     setIsLoading(true)
     try {
-      const response = await setGlobalPrice(data)
+      const payload = {
+        ...data,
+        effectiveFrom: `${data.effectiveFrom}T00:00:00Z`, // convert date-only -> OffsetDateTime
+      }
+      const response = await setGlobalPrice(payload)
       if (response.success) {
         toast.success("Precio actualizado exitosamente")
         onOpenChange(false)
@@ -147,7 +151,7 @@ export function SetPriceDialog({ service, open, onOpenChange, onSuccess }: SetPr
                       <Calendar
                         mode="single"
                         selected={field.value ? new Date(field.value) : undefined}
-                        onSelect={(date) => field.onChange(date?.toISOString().split("T")[0])}
+                        onSelect={(date) => field.onChange(date ? format(date, "yyyy-MM-dd") : "")}
                         locale={es}
                         initialFocus
                       />
