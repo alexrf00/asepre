@@ -164,7 +164,7 @@ export interface PaginatedResponse<T> {
 // ===== Role Types =====
 
 export interface Role {
-  id: number
+  id: string
   name: string
   description: string
   level: number

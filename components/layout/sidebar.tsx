@@ -31,13 +31,14 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { useAuthStore } from "@/lib/store/auth-store"
 import { PermissionGate } from "@/components/common/permission-gate"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import { Badge } from "@/components/ui/badge"
+import { useNavBadges } from "@/hooks/use-nav-badges"
 
 interface SidebarProps {
   isCollapsed: boolean
   onToggle: () => void
 }
 
-// Main navigation items
 const mainNavItems = [
   {
     title: "Dashboard",
@@ -46,7 +47,6 @@ const mainNavItems = [
   },
 ]
 
-// Admin navigation items
 const adminNavItems = [
   {
     title: "Users",
@@ -124,13 +124,16 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
   const logout = useAuthStore((state) => state.logout)
   const user = useAuthStore((state) => state.user)
   const [businessOpen, setBusinessOpen] = useState(pathname.startsWith("/business"))
+  const { overdueInvoices, pendingApprovals } = useNavBadges()
 
   const NavItem = ({
     item,
     isActive,
+    badge,
   }: {
     item: { title: string; href: string; icon: React.ElementType }
     isActive: boolean
+    badge?: { count: number; variant: "destructive" | "default" }
   }) => (
     <Link
       href={item.href}
@@ -140,8 +143,27 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         isCollapsed && "justify-center px-2",
       )}
     >
-      <item.icon className="h-4 w-4 shrink-0" />
-      {!isCollapsed && <span>{item.title}</span>}
+      <span className="relative">
+        <item.icon className="h-4 w-4 shrink-0" />
+        {isCollapsed && badge && badge.count > 0 && (
+          <Badge
+            variant={badge.variant}
+            className="absolute -top-2 -right-2 h-4 min-w-4 px-1 text-[10px] flex items-center justify-center"
+          >
+            {badge.count > 99 ? "99+" : badge.count}
+          </Badge>
+        )}
+      </span>
+      {!isCollapsed && (
+        <>
+          <span className="flex-1">{item.title}</span>
+          {badge && badge.count > 0 && (
+            <Badge variant={badge.variant} className="h-5 min-w-5 px-1.5 text-xs">
+              {badge.count > 99 ? "99+" : badge.count}
+            </Badge>
+          )}
+        </>
+      )}
     </Link>
   )
 
@@ -152,7 +174,6 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         isCollapsed ? "w-16" : "w-64",
       )}
     >
-      {/* Header */}
       <div className="flex h-16 items-center justify-between px-4 border-b border-border">
         {!isCollapsed && (
           <Link href="/dashboard" className="flex items-center gap-2">
@@ -165,10 +186,8 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         </Button>
       </div>
 
-      {/* Navigation */}
       <ScrollArea className="flex-1 px-3 py-4">
         <nav className="space-y-6">
-          {/* Main */}
           <div className="space-y-1">
             {!isCollapsed && (
               <p className="px-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Main</p>
@@ -191,19 +210,23 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                   </button>
                 </CollapsibleTrigger>
                 <CollapsibleContent className="space-y-1 pt-1">
-                  {businessNavItems.map((item) =>
-                    item.permissions.length > 0 ? (
+                  {businessNavItems.map((item) => {
+                    const badge =
+                      item.href === "/business/invoices" && overdueInvoices > 0
+                        ? { count: overdueInvoices, variant: "destructive" as const }
+                        : undefined
+
+                    return item.permissions.length > 0 ? (
                       <PermissionGate key={item.href} permissions={item.permissions}>
-                        <NavItem item={item} isActive={pathname === item.href} />
+                        <NavItem item={item} isActive={pathname === item.href} badge={badge} />
                       </PermissionGate>
                     ) : (
-                      <NavItem key={item.href} item={item} isActive={pathname === item.href} />
-                    ),
-                  )}
+                      <NavItem key={item.href} item={item} isActive={pathname === item.href} badge={badge} />
+                    )
+                  })}
                 </CollapsibleContent>
               </Collapsible>
             ) : (
-              // When collapsed, show just the Business icon that links to dashboard
               <Link
                 href="/business"
                 className={cn(
@@ -218,21 +241,26 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
             )}
           </div>
 
-          {/* Administration */}
           <div className="space-y-1">
             {!isCollapsed && (
               <p className="px-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Administration</p>
             )}
-            {adminNavItems.map((item) => (
-              <PermissionGate key={item.href} permissions={item.permissions}>
-                <NavItem item={item} isActive={pathname === item.href} />
-              </PermissionGate>
-            ))}
+            {adminNavItems.map((item) => {
+              const badge =
+                item.href === "/admin/user-approval" && pendingApprovals > 0
+                  ? { count: pendingApprovals, variant: "default" as const }
+                  : undefined
+
+              return (
+                <PermissionGate key={item.href} permissions={item.permissions}>
+                  <NavItem item={item} isActive={pathname === item.href} badge={badge} />
+                </PermissionGate>
+              )
+            })}
           </div>
         </nav>
       </ScrollArea>
 
-      {/* Footer */}
       <div className="border-t border-border p-3">
         <Button
           variant="ghost"

@@ -5,7 +5,7 @@ export async function getRoles(): Promise<Role[]> {
   return apiClient<Role[]>("/api/v1/rbac/roles")
 }
 
-export async function getRoleById(id: number): Promise<Role> {
+export async function getRoleById(id: string): Promise<Role> {
   return apiClient<Role>(`/api/v1/rbac/roles/${id}`)
 }
 
@@ -16,14 +16,14 @@ export async function createRole(data: CreateRoleRequest): Promise<ApiResponse<R
   })
 }
 
-export async function updateRole(id: number, data: UpdateRoleRequest): Promise<ApiResponse<Role>> {
+export async function updateRole(id: string, data: UpdateRoleRequest): Promise<ApiResponse<Role>> {
   return apiClient<ApiResponse<Role>>(`/api/v1/rbac/roles/${id}`, {
     method: "PUT",
     body: JSON.stringify(data),
   })
 }
 
-export async function deleteRole(id: number): Promise<ApiResponse<null>> {
+export async function deleteRole(id: string): Promise<ApiResponse<null>> {
   return apiClient<ApiResponse<null>>(`/api/v1/rbac/roles/${id}`, {
     method: "DELETE",
   })
