@@ -16,11 +16,11 @@ import { ContractStatusBadge } from "./contract-status-badge"
 import { CreateContractForm } from "./create-contract-form"
 import { ContractDetailSheet } from "./contract-detail-sheet"
 import { formatDate } from "@/lib/utils/formatters"
-import type { Contract, ContractStatus, Client } from "@/types/business"
+import type { ContractDto, ContractStatus, Client, BillingIntervalUnit } from "@/types/business"
 import type { PaginatedResponse } from "@/types"
 
 interface ContractsDataTableProps {
-  contracts: PaginatedResponse<Contract> | null
+  contracts: PaginatedResponse<ContractDto> | null
   clients: Client[]
   isLoading: boolean
   page: number
@@ -33,13 +33,11 @@ interface ContractsDataTableProps {
   isRefreshing: boolean
 }
 
-const billingFrequencyLabels: Record<string, string> = {
-  WEEKLY: "Weekly",
-  BIWEEKLY: "Bi-weekly",
-  MONTHLY: "Monthly",
-  QUARTERLY: "Quarterly",
-  ANNUALLY: "Annually",
-  ONE_TIME: "One-time",
+const billingIntervalLabels: Record<BillingIntervalUnit, string> = {
+  DAY: "Day(s)",
+  WEEK: "Week(s)",
+  MONTH: "Month(s)",
+  YEAR: "Year(s)",
 }
 
 export function ContractsDataTable({
@@ -59,7 +57,7 @@ export function ContractsDataTable({
   const [detailSheetOpen, setDetailSheetOpen] = useState(false)
   const [selectedContractId, setSelectedContractId] = useState<string | null>(null)
 
-  const handleRowClick = (contract: Contract) => {
+  const handleRowClick = (contract: ContractDto) => {
     setSelectedContractId(contract.id)
     setDetailSheetOpen(true)
   }
@@ -72,6 +70,25 @@ export function ContractsDataTable({
   const totalPages = contracts?.totalPages ?? 0
   const totalElements = contracts?.totalElements ?? 0
   const content = contracts?.content ?? []
+
+  const formatBillingInterval = (contract: ContractDto) => {
+    const count = contract.billingIntervalCount
+    const unit = billingIntervalLabels[contract.billingIntervalUnit]
+    if (count === 1) {
+      // Simplify display for common intervals
+      switch (contract.billingIntervalUnit) {
+        case "WEEK":
+          return "Weekly"
+        case "MONTH":
+          return "Monthly"
+        case "YEAR":
+          return "Annually"
+        default:
+          return `Every ${count} ${unit}`
+      }
+    }
+    return `Every ${count} ${unit}`
+  }
 
   return (
     <>
@@ -126,6 +143,7 @@ export function ContractsDataTable({
                 <SelectItem value="ACTIVE">Active</SelectItem>
                 <SelectItem value="SUSPENDED">Suspended</SelectItem>
                 <SelectItem value="TERMINATED">Terminated</SelectItem>
+                <SelectItem value="EXPIRED">Expired</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -210,13 +228,17 @@ export function ContractsDataTable({
                       <TableCell className="font-mono font-medium">{contract.contractNumber}</TableCell>
                       <TableCell className="font-medium">{contract.clientName}</TableCell>
                       <TableCell className="hidden md:table-cell">{formatDate(contract.startDate)}</TableCell>
-                      <TableCell className="hidden md:table-cell">{formatDate(contract.endDate)}</TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        {contract.endDate ? (
+                          formatDate(contract.endDate)
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
                       <TableCell>
                         <ContractStatusBadge status={contract.status} />
                       </TableCell>
-                      <TableCell className="hidden lg:table-cell">
-                        {billingFrequencyLabels[contract.billingFrequency] || contract.billingFrequency}
-                      </TableCell>
+                      <TableCell className="hidden lg:table-cell">{formatBillingInterval(contract)}</TableCell>
                       <TableCell className="hidden sm:table-cell">
                         {contract.hasCurrentDocument ? (
                           <CheckCircle className="h-4 w-4 text-green-600" />

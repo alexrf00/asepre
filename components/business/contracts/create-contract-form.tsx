@@ -23,20 +23,22 @@ import type {
   Client,
   CreateContractRequest,
   CreateContractLineRequest,
-  BillingFrequency,
+  BillingIntervalUnit,
   AgreementType,
 } from "@/types/business"
 
+// Form schema with flexible billing system
 const contractFormSchema = z
   .object({
     clientId: z.string().min(1, "Client is required"),
     startDate: z.string().min(1, "Start date is required"),
-    endDate: z.string().min(1, "End date is required"),
+    endDate: z.string().optional(),
     agreementType: z.enum(["WRITTEN", "VERBAL"]).default("WRITTEN"),
     terms: z.string().optional(),
     notes: z.string().optional(),
-    billingFrequency: z.enum(["WEEKLY", "BIWEEKLY", "MONTHLY", "QUARTERLY", "ANNUALLY", "ONE_TIME"]).default("MONTHLY"),
-    billingDayOfMonth: z.number().min(1).max(28).optional(),
+    billingIntervalUnit: z.enum(["DAY", "WEEK", "MONTH", "YEAR"]).default("MONTH"),
+    billingIntervalCount: z.number().min(1, "Must be at least 1").default(1),
+    billingDayOfMonth: z.number().min(1).max(31).optional(),
     autoInvoicingEnabled: z.boolean().default(false),
   })
   .refine(
@@ -90,14 +92,15 @@ export function CreateContractForm({ onSuccess, onCancel }: CreateContractFormPr
       agreementType: "WRITTEN",
       terms: "",
       notes: "",
-      billingFrequency: "MONTHLY",
+      billingIntervalUnit: "MONTH",
+      billingIntervalCount: 1,
       autoInvoicingEnabled: false,
     },
   })
 
   const clientId = watch("clientId")
   const agreementType = watch("agreementType")
-  const billingFrequency = watch("billingFrequency")
+  const billingIntervalUnit = watch("billingIntervalUnit")
 
   useEffect(() => {
     const fetchClients = async () => {
@@ -120,7 +123,7 @@ export function CreateContractForm({ onSuccess, onCancel }: CreateContractFormPr
       return await trigger(["clientId", "startDate", "endDate", "agreementType"])
     }
     if (currentStep === 2) {
-      return await trigger(["billingFrequency", "billingDayOfMonth"])
+      return await trigger(["billingIntervalUnit", "billingIntervalCount", "billingDayOfMonth"])
     }
     return true
   }
@@ -156,10 +159,11 @@ export function CreateContractForm({ onSuccess, onCancel }: CreateContractFormPr
       const contractData: CreateContractRequest = {
         clientId: data.clientId,
         startDate: data.startDate,
-        endDate: data.endDate,
+        endDate: data.endDate || undefined,
         terms: data.terms || undefined,
         notes: data.notes || undefined,
-        billingFrequency: data.billingFrequency,
+        billingIntervalUnit: data.billingIntervalUnit,
+        billingIntervalCount: data.billingIntervalCount,
         billingDayOfMonth: data.billingDayOfMonth,
         agreementType: data.agreementType,
         autoInvoicingEnabled: data.autoInvoicingEnabled,
@@ -192,6 +196,9 @@ export function CreateContractForm({ onSuccess, onCancel }: CreateContractFormPr
     { number: 2, title: "Billing" },
     { number: 3, title: "Services" },
   ]
+
+  // Show billing day only for MONTH/YEAR intervals
+  const showBillingDay = billingIntervalUnit === "MONTH" || billingIntervalUnit === "YEAR"
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col h-full">
@@ -261,14 +268,15 @@ export function CreateContractForm({ onSuccess, onCancel }: CreateContractFormPr
                     {errors.startDate && <p className="text-sm text-destructive">{errors.startDate.message}</p>}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="endDate">End Date *</Label>
+                    <Label htmlFor="endDate">End Date</Label>
                     <Input type="date" id="endDate" {...register("endDate")} />
+                    <p className="text-xs text-muted-foreground">Optional - leave empty for open-ended contracts</p>
                     {errors.endDate && <p className="text-sm text-destructive">{errors.endDate.message}</p>}
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Agreement Type</Label>
+                  <Label>Agreement Type *</Label>
                   <RadioGroup
                     value={agreementType}
                     onValueChange={(value) => setValue("agreementType", value as AgreementType)}
@@ -287,6 +295,11 @@ export function CreateContractForm({ onSuccess, onCancel }: CreateContractFormPr
                       </Label>
                     </div>
                   </RadioGroup>
+                  <p className="text-xs text-muted-foreground">
+                    {agreementType === "WRITTEN"
+                      ? "Written agreements require an uploaded document to activate"
+                      : "Verbal agreements can be activated without a document"}
+                  </p>
                 </div>
 
                 <div className="space-y-2">
@@ -312,27 +325,44 @@ export function CreateContractForm({ onSuccess, onCancel }: CreateContractFormPr
                 <CardDescription>Set up billing frequency and options</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="billingFrequency">Billing Frequency</Label>
-                  <Select
-                    value={billingFrequency}
-                    onValueChange={(value) => setValue("billingFrequency", value as BillingFrequency)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select frequency" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="WEEKLY">Weekly</SelectItem>
-                      <SelectItem value="BIWEEKLY">Bi-weekly</SelectItem>
-                      <SelectItem value="MONTHLY">Monthly</SelectItem>
-                      <SelectItem value="QUARTERLY">Quarterly</SelectItem>
-                      <SelectItem value="ANNUALLY">Annually</SelectItem>
-                      <SelectItem value="ONE_TIME">One-time</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="billingIntervalUnit">Billing Interval Unit</Label>
+                    <Select
+                      value={billingIntervalUnit}
+                      onValueChange={(value) => setValue("billingIntervalUnit", value as BillingIntervalUnit)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select unit" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="DAY">Day(s)</SelectItem>
+                        <SelectItem value="WEEK">Week(s)</SelectItem>
+                        <SelectItem value="MONTH">Month(s)</SelectItem>
+                        <SelectItem value="YEAR">Year(s)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="billingIntervalCount">Interval Count</Label>
+                    <Input
+                      type="number"
+                      id="billingIntervalCount"
+                      min={1}
+                      placeholder="e.g., 1, 3, 6"
+                      {...register("billingIntervalCount", { valueAsNumber: true })}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      e.g., 1 Month = Monthly, 3 Months = Quarterly, 6 Months = Semi-annually
+                    </p>
+                    {errors.billingIntervalCount && (
+                      <p className="text-sm text-destructive">{errors.billingIntervalCount.message}</p>
+                    )}
+                  </div>
                 </div>
 
-                {billingFrequency !== "ONE_TIME" && (
+                {showBillingDay && (
                   <div className="space-y-2">
                     <Label htmlFor="billingDayOfMonth">Billing Day of Month</Label>
                     <Input
@@ -340,10 +370,10 @@ export function CreateContractForm({ onSuccess, onCancel }: CreateContractFormPr
                       id="billingDayOfMonth"
                       min={1}
                       max={28}
-                      placeholder="1-28"
+                      placeholder="1-31"
                       {...register("billingDayOfMonth", { valueAsNumber: true })}
                     />
-                    <p className="text-xs text-muted-foreground">Day of month to generate invoices (1-28)</p>
+                    <p className="text-xs text-muted-foreground">Day of month to generate invoices (1-31)</p>
                     {errors.billingDayOfMonth && (
                       <p className="text-sm text-destructive">{errors.billingDayOfMonth.message}</p>
                     )}
@@ -360,6 +390,9 @@ export function CreateContractForm({ onSuccess, onCancel }: CreateContractFormPr
                     Enable automatic invoicing
                   </Label>
                 </div>
+                <p className="text-xs text-muted-foreground">
+                  When enabled, invoices will be automatically generated based on the billing schedule
+                </p>
               </CardContent>
             </Card>
           </div>
@@ -371,7 +404,7 @@ export function CreateContractForm({ onSuccess, onCancel }: CreateContractFormPr
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">Service Lines</CardTitle>
-                <CardDescription>Add services to this contract</CardDescription>
+                <CardDescription>Add services to this contract (at least one required)</CardDescription>
               </CardHeader>
               <CardContent>
                 {!clientId ? (

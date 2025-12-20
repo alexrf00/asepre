@@ -184,22 +184,25 @@ export interface ResolvedPrice {
 // ===== CONTRACT TYPES =====
 
 /** Status of a contract */
-export type ContractStatus = "DRAFT" | "ACTIVE" | "SUSPENDED" | "TERMINATED"
+export type ContractStatus = "DRAFT" | "ACTIVE" | "SUSPENDED" | "TERMINATED" | "EXPIRED"
 
-/** How often billing occurs */
+/** How often billing occurs (legacy field) */
 export type BillingFrequency = "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "QUARTERLY" | "ANNUALLY" | "ONE_TIME"
 
-/** Unit for billing interval calculation */
+/** Unit for billing interval calculation (flexible billing system) */
 export type BillingIntervalUnit = "DAY" | "WEEK" | "MONTH" | "YEAR"
 
-/** Type of agreement */
+/** Type of agreement - affects activation requirements */
 export type AgreementType = "WRITTEN" | "VERBAL"
 
 /** Type of contract document */
 export type ContractDocumentType = "EXECUTED" | "AMENDMENT" | "ADDENDUM" | "ANNEX"
 
+/** Source of the price for a contract line */
+export type PriceSource = "GLOBAL" | "CLIENT" | "MANUAL"
+
 /** Individual line item in a contract */
-export interface ContractLine {
+export interface ContractLineDto {
   id: string
   serviceId: string
   serviceCode: string
@@ -210,8 +213,7 @@ export interface ContractLine {
   billingUnitName: string
   unitPrice: number
   currency: string
-  /** Source of the price (GLOBAL, CLIENT, or MANUAL) */
-  priceSource: string
+  priceSource: PriceSource
   itbisApplicable: boolean
   scheduleNotes?: string
   active: boolean
@@ -220,7 +222,7 @@ export interface ContractLine {
 }
 
 /** Document attached to a contract */
-export interface ContractDocument {
+export interface ContractDocumentDto {
   id: string
   contractId: string
   version: number
@@ -231,25 +233,31 @@ export interface ContractDocument {
   /** SHA-256 hash for document integrity verification */
   sha256: string
   uploadedAt: string
-  uploadedBy: string
+  uploadedBy?: string
   notes?: string
   isCurrent: boolean
 }
 
 /** Contract entity with full details including lines */
-export interface Contract {
+export interface ContractDto {
   id: string
   contractNumber: string
   clientId: string
   clientName: string
-  startDate: string
-  endDate: string
+  startDate: string // LocalDate as ISO string
+  endDate?: string // LocalDate as ISO string (optional)
   status: ContractStatus
   terms?: string
   notes?: string
-  billingFrequency: BillingFrequency
+  billingFrequency?: BillingFrequency // Legacy field
   billingDayOfMonth?: number
-  lines: ContractLine[]
+  billingIntervalUnit: BillingIntervalUnit
+  billingIntervalCount: number
+  autoInvoicingEnabled: boolean
+  nextInvoiceDate?: string
+  agreementType: AgreementType
+  lines: ContractLineDto[]
+  // Document metadata (for UI convenience)
   hasCurrentDocument: boolean
   currentDocumentVersion?: number
   currentDocumentType?: ContractDocumentType
@@ -272,16 +280,16 @@ export interface CreateContractLineRequest {
 export interface CreateContractRequest {
   clientId: string
   startDate: string
-  endDate: string
+  endDate?: string
   terms?: string
   notes?: string
-  billingFrequency?: BillingFrequency
+  billingFrequency?: BillingFrequency // Legacy, prefer billingIntervalUnit/Count
   billingDayOfMonth?: number
   billingIntervalUnit?: BillingIntervalUnit
   billingIntervalCount?: number
-  agreementType?: AgreementType
+  agreementType?: AgreementType // Defaults to WRITTEN
   autoInvoicingEnabled?: boolean
-  lines: CreateContractLineRequest[]
+  lines?: CreateContractLineRequest[]
 }
 
 /** Request payload for updating an existing contract */
@@ -297,6 +305,11 @@ export interface UpdateContractRequest {
   agreementType?: AgreementType
   autoInvoicingEnabled?: boolean
 }
+
+// Legacy type aliases for backwards compatibility
+export type ContractLine = ContractLineDto
+export type ContractDocument = ContractDocumentDto
+export type Contract = ContractDto
 
 // ===== INVOICE TYPES =====
 

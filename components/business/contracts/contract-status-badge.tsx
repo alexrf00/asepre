@@ -1,9 +1,8 @@
 "use client"
 
 import type React from "react"
-
 import { Badge } from "@/components/ui/badge"
-import { FileEdit, CheckCircle2, PauseCircle, XCircle } from "lucide-react"
+import { FileEdit, CheckCircle2, PauseCircle, XCircle, Clock } from "lucide-react"
 import type { ContractStatus } from "@/types/business"
 
 interface ContractStatusBadgeProps {
@@ -21,9 +20,9 @@ const statusConfig: Record<
 > = {
   DRAFT: {
     label: "Draft",
-    variant: "secondary",
+    variant: "outline",
     icon: FileEdit,
-    className: "bg-muted text-muted-foreground",
+    className: "bg-muted text-muted-foreground border-muted-foreground/30",
   },
   ACTIVE: {
     label: "Active",
@@ -42,6 +41,12 @@ const statusConfig: Record<
     variant: "destructive",
     icon: XCircle,
     className: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100",
+  },
+  EXPIRED: {
+    label: "Expired",
+    variant: "secondary",
+    icon: Clock,
+    className: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300",
   },
 }
 

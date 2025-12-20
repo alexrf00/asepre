@@ -1,7 +1,17 @@
 "use client"
 
 import { useState } from "react"
-import { Play, Pause, XCircle, RotateCcw, Loader2, AlertTriangle, CheckCircle } from "lucide-react"
+import {
+  Play,
+  Pause,
+  XCircle,
+  RotateCcw,
+  Loader2,
+  AlertTriangle,
+  CheckCircle,
+  FileText,
+  AlertCircle,
+} from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -15,13 +25,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { PermissionGate } from "@/components/common/permission-gate"
 import { activateContract, suspendContract, terminateContract, reactivateContract } from "@/lib/api/contracts"
-import type { Contract } from "@/types/business"
+import type { ContractDto } from "@/types/business"
 
 interface ContractStatusActionsProps {
-  contract: Contract
+  contract: ContractDto
   onStatusChange: () => void
 }
 
@@ -78,28 +88,35 @@ export function ContractStatusActions({ contract, onStatusChange }: ContractStat
     setReason("")
   }
 
-  const canActivate = (): { allowed: boolean; issues: string[] } => {
+  // Activation requirements based on backend rules
+  const canActivate = (): { allowed: boolean; issues: string[]; warnings: string[] } => {
     const issues: string[] = []
+    const warnings: string[] = []
 
+    // Must have at least one service line
     if (contract.lines.length === 0) {
       issues.push("Contract must have at least one service line")
     }
 
-    // Check if written agreement requires document
-    // Note: We're checking agreementType from the contract object
-    // The Contract type doesn't include agreementType, so we'll skip this check
-    // if the backend validates it during activation
-    if (!contract.hasCurrentDocument) {
-      issues.push("Written agreements require an uploaded document (optional for verbal)")
+    // WRITTEN agreements require an uploaded document of type EXECUTED
+    if (contract.agreementType === "WRITTEN" && !contract.hasCurrentDocument) {
+      issues.push("Written agreements require an uploaded EXECUTED document to activate")
+    }
+
+    // VERBAL agreements can activate without document but may want one
+    if (contract.agreementType === "VERBAL" && !contract.hasCurrentDocument) {
+      warnings.push("Verbal agreement - document is optional but recommended")
     }
 
     return {
-      allowed: contract.lines.length > 0,
+      allowed: issues.length === 0,
       issues,
+      warnings,
     }
   }
 
   const activationCheck = canActivate()
+  const isEditable = contract.status === "DRAFT"
 
   // Status-based action buttons
   const renderActions = () => {
@@ -107,16 +124,47 @@ export function ContractStatusActions({ contract, onStatusChange }: ContractStat
       case "DRAFT":
         return (
           <PermissionGate permission="BUSINESS_CONTRACT_UPDATE">
-            <Button onClick={() => setAction("activate")} disabled={!activationCheck.allowed}>
-              <Play className="mr-2 h-4 w-4" />
-              Activate Contract
-            </Button>
+            <div className="space-y-4">
+              {!activationCheck.allowed && (
+                <Alert variant="destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTitle>Cannot Activate</AlertTitle>
+                  <AlertDescription>
+                    <ul className="list-disc list-inside mt-2">
+                      {activationCheck.issues.map((issue, i) => (
+                        <li key={i}>{issue}</li>
+                      ))}
+                    </ul>
+                  </AlertDescription>
+                </Alert>
+              )}
+              {activationCheck.warnings.length > 0 && activationCheck.allowed && (
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    <ul className="list-disc list-inside">
+                      {activationCheck.warnings.map((warning, i) => (
+                        <li key={i}>{warning}</li>
+                      ))}
+                    </ul>
+                  </AlertDescription>
+                </Alert>
+              )}
+              <Button
+                onClick={() => setAction("activate")}
+                disabled={!activationCheck.allowed}
+                className="w-full sm:w-auto"
+              >
+                <Play className="mr-2 h-4 w-4" />
+                Activate Contract
+              </Button>
+            </div>
           </PermissionGate>
         )
       case "ACTIVE":
         return (
           <PermissionGate permission="BUSINESS_CONTRACT_UPDATE">
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <Button variant="outline" onClick={() => setAction("suspend")}>
                 <Pause className="mr-2 h-4 w-4" />
                 Suspend
@@ -131,7 +179,7 @@ export function ContractStatusActions({ contract, onStatusChange }: ContractStat
       case "SUSPENDED":
         return (
           <PermissionGate permission="BUSINESS_CONTRACT_UPDATE">
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <Button onClick={() => setAction("reactivate")}>
                 <RotateCcw className="mr-2 h-4 w-4" />
                 Reactivate
@@ -145,7 +193,19 @@ export function ContractStatusActions({ contract, onStatusChange }: ContractStat
         )
       case "TERMINATED":
         return (
-          <p className="text-sm text-muted-foreground">This contract has been terminated and cannot be modified.</p>
+          <Alert>
+            <XCircle className="h-4 w-4" />
+            <AlertTitle>Contract Terminated</AlertTitle>
+            <AlertDescription>This contract has been terminated and cannot be modified.</AlertDescription>
+          </Alert>
+        )
+      case "EXPIRED":
+        return (
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Contract Expired</AlertTitle>
+            <AlertDescription>This contract has expired and is no longer active.</AlertDescription>
+          </Alert>
         )
       default:
         return null
@@ -154,21 +214,7 @@ export function ContractStatusActions({ contract, onStatusChange }: ContractStat
 
   return (
     <>
-      <div className="flex flex-col gap-4">
-        {contract.status === "DRAFT" && !activationCheck.allowed && (
-          <Alert variant="destructive">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertDescription>
-              <ul className="list-disc list-inside">
-                {activationCheck.issues.map((issue, i) => (
-                  <li key={i}>{issue}</li>
-                ))}
-              </ul>
-            </AlertDescription>
-          </Alert>
-        )}
-        {renderActions()}
-      </div>
+      <div className="flex flex-col gap-4">{renderActions()}</div>
 
       {/* Activation Dialog */}
       <Dialog open={action === "activate"} onOpenChange={(open) => !open && closeDialog()}>
@@ -190,12 +236,22 @@ export function ContractStatusActions({ contract, onStatusChange }: ContractStat
                     <CheckCircle className="h-3 w-3 text-green-600" />
                     {contract.lines.length} service line(s) configured
                   </li>
-                  {contract.hasCurrentDocument && (
-                    <li className="flex items-center gap-2">
+                  <li className="flex items-center gap-2">
+                    {contract.hasCurrentDocument ? (
                       <CheckCircle className="h-3 w-3 text-green-600" />
-                      Contract document uploaded
-                    </li>
-                  )}
+                    ) : (
+                      <FileText className="h-3 w-3 text-muted-foreground" />
+                    )}
+                    {contract.hasCurrentDocument
+                      ? "Contract document uploaded"
+                      : contract.agreementType === "VERBAL"
+                        ? "Document optional (verbal agreement)"
+                        : "Document required (written agreement)"}
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-3 w-3 text-green-600" />
+                    Agreement type: {contract.agreementType}
+                  </li>
                 </ul>
               </div>
             </div>

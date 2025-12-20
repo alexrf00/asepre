@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useRef } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -25,12 +24,9 @@ import {
 import { uploadContractDocument } from "@/lib/api/contracts"
 import type { ContractDocumentType } from "@/types/business"
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
-const ACCEPTED_FILE_TYPES = [
-  "application/pdf",
-  "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-]
+// Max file size: 25MB (backend configurable)
+const MAX_FILE_SIZE = 25 * 1024 * 1024
+const ACCEPTED_FILE_TYPES = ["application/pdf"]
 
 const uploadFormSchema = z.object({
   documentType: z.enum(["EXECUTED", "AMENDMENT", "ADDENDUM", "ANNEX"]),
@@ -93,11 +89,11 @@ export function UploadDocumentDialog({ contractId, open, onOpenChange, onSuccess
 
   const handleFileSelect = (selectedFile: File) => {
     if (!ACCEPTED_FILE_TYPES.includes(selectedFile.type)) {
-      toast.error("Invalid file type. Please upload PDF, DOC, or DOCX files.")
+      toast.error("Invalid file type. Please upload a PDF file.")
       return
     }
     if (selectedFile.size > MAX_FILE_SIZE) {
-      toast.error("File too large. Maximum size is 10MB.")
+      toast.error("File too large. Maximum size is 25MB.")
       return
     }
     setFile(selectedFile)
@@ -158,7 +154,7 @@ export function UploadDocumentDialog({ contractId, open, onOpenChange, onSuccess
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Upload Contract Document</DialogTitle>
-          <DialogDescription>Upload a PDF, DOC, or DOCX file (max 10MB)</DialogDescription>
+          <DialogDescription>Upload a PDF file (max 25MB)</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -175,7 +171,7 @@ export function UploadDocumentDialog({ contractId, open, onOpenChange, onSuccess
             <input
               ref={fileInputRef}
               type="file"
-              accept=".pdf,.doc,.docx"
+              accept=".pdf"
               onChange={handleFileInputChange}
               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
             />
@@ -205,7 +201,7 @@ export function UploadDocumentDialog({ contractId, open, onOpenChange, onSuccess
               <div className="text-center">
                 <Upload className="mx-auto h-10 w-10 text-muted-foreground" />
                 <p className="mt-2 text-sm text-muted-foreground">Drag and drop or click to select</p>
-                <p className="text-xs text-muted-foreground mt-1">PDF, DOC, DOCX (max 10MB)</p>
+                <p className="text-xs text-muted-foreground mt-1">PDF only (max 25MB)</p>
               </div>
             )}
           </div>
@@ -235,7 +231,6 @@ export function UploadDocumentDialog({ contractId, open, onOpenChange, onSuccess
               id="notes"
               placeholder="Optional notes about this document..."
               rows={2}
-              {...({} as any)}
               value={watch("notes") || ""}
               onChange={(e) => setValue("notes", e.target.value)}
             />

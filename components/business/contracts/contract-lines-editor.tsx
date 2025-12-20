@@ -8,15 +8,17 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Badge } from "@/components/ui/badge"
 import { getActiveServices, getBillingUnits } from "@/lib/api/services"
 import { resolvePrice } from "@/lib/api/pricing"
-import type { ServiceCatalog, BillingUnit, CreateContractLineRequest } from "@/types/business"
+import type { ServiceCatalog, BillingUnit, CreateContractLineRequest, PriceSource } from "@/types/business"
 
 interface ContractLineItem extends CreateContractLineRequest {
   id: string
   serviceName?: string
   billingUnitName?: string
   resolvedPrice?: number
+  priceSource?: PriceSource
   lineTotal?: number
 }
 
@@ -97,6 +99,11 @@ export function ContractLinesEditor({ clientId, lines, onChange, readOnly = fals
       const price = updated.manualUnitPrice ?? updated.resolvedPrice ?? 0
       updated.lineTotal = (updated.quantity || 0) * price
 
+      // Update price source
+      if (updated.manualUnitPrice !== undefined) {
+        updated.priceSource = "MANUAL"
+      }
+
       return updated
     })
 
@@ -113,9 +120,11 @@ export function ContractLinesEditor({ clientId, lines, onChange, readOnly = fals
               if (line.id !== id) return line
               const resolvedPrice = priceRes.data!.price
               const price = line.manualUnitPrice ?? resolvedPrice
+              const priceSource = line.manualUnitPrice !== undefined ? "MANUAL" : priceRes.data!.source
               return {
                 ...line,
                 resolvedPrice,
+                priceSource: priceSource as PriceSource,
                 lineTotal: (line.quantity || 0) * price,
               }
             }),
@@ -236,9 +245,16 @@ export function ContractLinesEditor({ clientId, lines, onChange, readOnly = fals
                     </TableCell>
                     <TableCell>
                       {readOnly ? (
-                        <span className="font-mono">
-                          {formatCurrency(line.manualUnitPrice ?? line.resolvedPrice ?? 0)}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono">
+                            {formatCurrency(line.manualUnitPrice ?? line.resolvedPrice ?? 0)}
+                          </span>
+                          {line.priceSource && line.priceSource !== "GLOBAL" && (
+                            <Badge variant="outline" className="text-xs">
+                              {line.priceSource}
+                            </Badge>
+                          )}
+                        </div>
                       ) : (
                         <div className="space-y-1">
                           <Input
@@ -264,7 +280,8 @@ export function ContractLinesEditor({ clientId, lines, onChange, readOnly = fals
                           )}
                           {line.resolvedPrice && !line.manualUnitPrice && (
                             <p className="text-xs text-muted-foreground">
-                              Resolved: {formatCurrency(line.resolvedPrice)}
+                              {line.priceSource === "CLIENT" ? "Client" : "Global"}:{" "}
+                              {formatCurrency(line.resolvedPrice)}
                             </p>
                           )}
                         </div>

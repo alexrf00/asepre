@@ -1,5 +1,6 @@
 "use client"
-import { Calendar, Building, Clock, Loader2 } from "lucide-react"
+
+import { Calendar, Building, Clock, Loader2, FileText, Receipt } from "lucide-react"
 import useSWR from "swr"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
@@ -13,6 +14,7 @@ import { ContractDocuments } from "./contract-documents"
 import { ContractStatusActions } from "./contract-status-actions"
 import { getContract } from "@/lib/api/contracts"
 import { formatDate, formatDateTime } from "@/lib/utils/formatters"
+import type { BillingIntervalUnit } from "@/types/business"
 
 interface ContractDetailSheetProps {
   contractId: string | null
@@ -21,13 +23,16 @@ interface ContractDetailSheetProps {
   onRefresh: () => void
 }
 
-const billingFrequencyLabels: Record<string, string> = {
-  WEEKLY: "Weekly",
-  BIWEEKLY: "Bi-weekly",
-  MONTHLY: "Monthly",
-  QUARTERLY: "Quarterly",
-  ANNUALLY: "Annually",
-  ONE_TIME: "One-time",
+const billingIntervalLabels: Record<BillingIntervalUnit, string> = {
+  DAY: "Day(s)",
+  WEEK: "Week(s)",
+  MONTH: "Month(s)",
+  YEAR: "Year(s)",
+}
+
+const agreementTypeLabels = {
+  WRITTEN: "Written Agreement",
+  VERBAL: "Verbal Agreement",
 }
 
 export function ContractDetailSheet({ contractId, open, onOpenChange, onRefresh }: ContractDetailSheetProps) {
@@ -51,10 +56,19 @@ export function ContractDetailSheet({ contractId, open, onOpenChange, onRefresh 
     onRefresh()
   }
 
-  const isDraft = contract?.status === "DRAFT"
+  const isEditable = contract?.status === "DRAFT"
   const isTerminated = contract?.status === "TERMINATED"
+  const isExpired = contract?.status === "EXPIRED"
+  const isReadOnly = isTerminated || isExpired
 
   const contractTotal = contract?.lines.reduce((sum, line) => sum + line.lineTotal, 0) || 0
+
+  const formatBillingInterval = () => {
+    if (!contract) return "—"
+    const count = contract.billingIntervalCount
+    const unit = billingIntervalLabels[contract.billingIntervalUnit]
+    return `Every ${count} ${unit}`
+  }
 
   if (!contractId) return null
 
@@ -110,7 +124,7 @@ export function ContractDetailSheet({ contractId, open, onOpenChange, onRefresh 
                         <p className="text-sm text-muted-foreground">End Date</p>
                         <p className="font-medium flex items-center gap-2">
                           <Calendar className="h-4 w-4 text-muted-foreground" />
-                          {formatDate(contract.endDate)}
+                          {contract.endDate ? formatDate(contract.endDate) : "No end date"}
                         </p>
                       </div>
                     </div>
@@ -119,10 +133,10 @@ export function ContractDetailSheet({ contractId, open, onOpenChange, onRefresh 
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <p className="text-sm text-muted-foreground">Billing Frequency</p>
+                        <p className="text-sm text-muted-foreground">Billing Interval</p>
                         <p className="font-medium flex items-center gap-2">
                           <Clock className="h-4 w-4 text-muted-foreground" />
-                          {billingFrequencyLabels[contract.billingFrequency] || contract.billingFrequency}
+                          {formatBillingInterval()}
                         </p>
                       </div>
                       {contract.billingDayOfMonth && (
@@ -132,6 +146,32 @@ export function ContractDetailSheet({ contractId, open, onOpenChange, onRefresh 
                         </div>
                       )}
                     </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Agreement Type</p>
+                        <p className="font-medium flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-muted-foreground" />
+                          {agreementTypeLabels[contract.agreementType]}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Auto Invoicing</p>
+                        <Badge variant={contract.autoInvoicingEnabled ? "default" : "secondary"}>
+                          {contract.autoInvoicingEnabled ? "Enabled" : "Disabled"}
+                        </Badge>
+                      </div>
+                    </div>
+
+                    {contract.nextInvoiceDate && (
+                      <div>
+                        <p className="text-sm text-muted-foreground">Next Invoice Date</p>
+                        <p className="font-medium flex items-center gap-2">
+                          <Receipt className="h-4 w-4 text-muted-foreground" />
+                          {formatDate(contract.nextInvoiceDate)}
+                        </p>
+                      </div>
+                    )}
 
                     <Separator />
 
@@ -215,7 +255,7 @@ export function ContractDetailSheet({ contractId, open, onOpenChange, onRefresh 
                                 <TableCell>{line.billingUnitName}</TableCell>
                                 <TableCell className="font-mono">
                                   {formatCurrency(line.unitPrice)}
-                                  {line.priceSource !== "RESOLVED" && (
+                                  {line.priceSource !== "GLOBAL" && (
                                     <Badge variant="outline" className="ml-2 text-xs">
                                       {line.priceSource}
                                     </Badge>
@@ -253,7 +293,7 @@ export function ContractDetailSheet({ contractId, open, onOpenChange, onRefresh 
                 <ContractDocuments
                   contractId={contract.id}
                   hasCurrentDocument={contract.hasCurrentDocument}
-                  readOnly={isTerminated}
+                  readOnly={isReadOnly}
                 />
               </TabsContent>
 

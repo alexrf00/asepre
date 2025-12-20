@@ -12,7 +12,7 @@ import { PermissionGate } from "@/components/common/permission-gate"
 import { UploadDocumentDialog } from "./upload-document-dialog"
 import { listContractDocuments, downloadContractDocument, downloadCurrentDocument } from "@/lib/api/contracts"
 import { formatDateTime } from "@/lib/utils/formatters"
-import type { ContractDocument, ContractDocumentType } from "@/types/business"
+import type { ContractDocumentDto, ContractDocumentType } from "@/types/business"
 
 interface ContractDocumentsProps {
   contractId: string
@@ -28,7 +28,7 @@ const documentTypeLabels: Record<ContractDocumentType, string> = {
 }
 
 export function ContractDocuments({ contractId, hasCurrentDocument, readOnly = false }: ContractDocumentsProps) {
-  const [documents, setDocuments] = useState<ContractDocument[]>([])
+  const [documents, setDocuments] = useState<ContractDocumentDto[]>([])
   const [loading, setLoading] = useState(true)
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false)
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
@@ -75,7 +75,7 @@ export function ContractDocuments({ contractId, hasCurrentDocument, readOnly = f
     try {
       const blob = await downloadCurrentDocument(contractId)
       const currentDoc = documents.find((d) => d.isCurrent)
-      const fileName = currentDoc?.fileName || "contract-document"
+      const fileName = currentDoc?.fileName || "contract-document.pdf"
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement("a")
       a.href = url
