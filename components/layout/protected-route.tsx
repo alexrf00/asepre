@@ -69,8 +69,8 @@ export function ProtectedRoute({
     }
   }
 
-  // SUPERADMIN always has access
-  if (user?.roles.includes("SUPERADMIN")) {
+  // SUPERADMIN always has access - use ?. for safety
+  if (user?.roles?.includes("SUPERADMIN")) {
     hasAccess = true
   }
 

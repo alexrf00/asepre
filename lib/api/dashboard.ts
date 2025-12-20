@@ -1,5 +1,5 @@
 import { apiClient } from "./client"
-import type { PaginatedResponse } from "@/types"
+import type { ApiResponse, PaginatedResponse } from "@/types"
 
 // Dashboard Types
 export interface TrendInfo {
@@ -47,47 +47,96 @@ export interface DashboardSummary {
   recentActivity: ActivityItem[]
 }
 
+// Default empty values for error cases
+const emptyStats: DashboardStats = {
+  totalUsers: 0,
+  activeUsers: 0,
+  totalRoles: 0,
+  pendingVerifications: 0,
+  usersTrend: null,
+  activeUsersTrend: null,
+  verificationsTrend: null,
+  totalPermissions: 0,
+  lockedUsers: 0,
+  deletedUsers: 0,
+  loginsToday: 0,
+  failedLoginsToday: 0,
+  activityByType: {},
+  generatedAt: new Date().toISOString()
+}
+
+const emptyPaginatedResponse = <T>(): PaginatedResponse<T> => ({
+  content: [],
+  totalElements: 0,
+  totalPages: 0,
+  size: 20,
+  number: 0,
+  first: true,
+  last: true,
+  empty: true,
+})
+
 // API Functions
 
+/**
+ * Get dashboard statistics
+ * Backend returns: ApiResponse<DashboardStatsDto>
+ */
 export async function getDashboardStats(): Promise<DashboardStats> {
-  const response = await apiClient<{ success: boolean; data: DashboardStats }>("/api/v1/dashboard/stats")
-  return response.data
+  const response = await apiClient<ApiResponse<DashboardStats>>("/api/v1/dashboard/stats")
+  return response.data ?? emptyStats
 }
 
+/**
+ * Get recent activity
+ * Backend returns: ApiResponse<List<ActivityDto>>
+ */
 export async function getRecentActivity(limit: number = 10): Promise<ActivityItem[]> {
-  const response = await apiClient<{ success: boolean; data: ActivityItem[] }>(
+  const response = await apiClient<ApiResponse<ActivityItem[]>>(
     `/api/v1/dashboard/activity?limit=${limit}`
   )
-  return response.data
+  return response.data ?? []
 }
 
+/**
+ * Get dashboard summary (stats + recent activity in one call)
+ * Backend returns: ApiResponse with stats and recentActivity fields
+ */
 export async function getDashboardSummary(activityLimit: number = 10): Promise<DashboardSummary> {
-  const response = await apiClient<{ success: boolean; stats: DashboardStats; recentActivity: ActivityItem[] }>(
+  const response = await apiClient<ApiResponse<{ stats: DashboardStats; recentActivity: ActivityItem[] }>>(
     `/api/v1/dashboard/summary?activityLimit=${activityLimit}`
   )
   return {
-    stats: response.stats,
-    recentActivity: response.recentActivity,
+    stats: response.data?.stats ?? emptyStats,
+    recentActivity: response.data?.recentActivity ?? [],
   }
 }
 
+/**
+ * Get all activities with pagination
+ * Backend returns: ApiResponse<Page<ActivityDto>>
+ */
 export async function getAllActivities(
   page: number = 0,
   size: number = 20
 ): Promise<PaginatedResponse<ActivityItem>> {
-  const response = await apiClient<{ success: boolean; data: PaginatedResponse<ActivityItem> }>(
+  const response = await apiClient<ApiResponse<PaginatedResponse<ActivityItem>>>(
     `/api/v1/dashboard/activity/all?page=${page}&size=${size}`
   )
-  return response.data
+  return response.data ?? emptyPaginatedResponse<ActivityItem>()
 }
 
+/**
+ * Get activities for a specific user with pagination
+ * Backend returns: ApiResponse<Page<ActivityDto>>
+ */
 export async function getUserActivities(
-  userId: number,
+  userId: string,  // Changed from number to string for UUID consistency
   page: number = 0,
   size: number = 20
 ): Promise<PaginatedResponse<ActivityItem>> {
-  const response = await apiClient<{ success: boolean; data: PaginatedResponse<ActivityItem> }>(
+  const response = await apiClient<ApiResponse<PaginatedResponse<ActivityItem>>>(
     `/api/v1/dashboard/activity/user/${userId}?page=${page}&size=${size}`
   )
-  return response.data
+  return response.data ?? emptyPaginatedResponse<ActivityItem>()
 }

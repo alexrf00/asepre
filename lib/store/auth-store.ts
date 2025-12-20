@@ -79,13 +79,14 @@ export const useAuthStore = create<AuthStore>()(
 
           // Successful login
           if ('success' in response && response.success && response.data) {
-            // Fetch full user data
+            // Fetch full user data - getCurrentUser returns User directly (extracts from ApiResponse)
             const user = await usersApi.getCurrentUser()
-            const permissionsData = await usersApi.getCurrentUserPermissions()
+            // getCurrentUserPermissions returns string[] directly (extracts from ApiResponse)
+            const permissions = await usersApi.getCurrentUserPermissions()
 
             set({
               user,
-              permissions: permissionsData.permissions,
+              permissions,
               isAuthenticated: true,
               isLoading: false,
             })
@@ -152,11 +153,14 @@ export const useAuthStore = create<AuthStore>()(
         }
 
         try {
+          // getCurrentUser returns User directly (extracts from ApiResponse)
           const user = await usersApi.getCurrentUser()
-          const permissionsData = await usersApi.getCurrentUserPermissions()
+          // getCurrentUserPermissions returns string[] directly (extracts from ApiResponse)
+          const permissions = await usersApi.getCurrentUserPermissions()
+          
           set({
             user,
-            permissions: permissionsData.permissions,
+            permissions,
             isAuthenticated: true,
           })
         } catch {
@@ -170,25 +174,25 @@ export const useAuthStore = create<AuthStore>()(
 
       hasPermission: (permission) => {
         const { permissions, user } = get()
-        // SUPERADMIN has all permissions
-        if (user?.roles.includes("SUPERADMIN")) return true
+        // SUPERADMIN has all permissions - use ?. to handle undefined roles
+        if (user?.roles?.includes("SUPERADMIN")) return true
         return permissions.includes(permission)
       },
 
       hasRole: (role) => {
         const { user } = get()
-        return user?.roles.includes(role) ?? false
+        return user?.roles?.includes(role) ?? false
       },
 
       hasAnyPermission: (perms) => {
         const { permissions, user } = get()
-        if (user?.roles.includes("SUPERADMIN")) return true
+        if (user?.roles?.includes("SUPERADMIN")) return true
         return perms.some((p) => permissions.includes(p))
       },
 
       hasAnyRole: (roles) => {
         const { user } = get()
-        return roles.some((r) => user?.roles.includes(r))
+        return roles.some((r) => user?.roles?.includes(r) ?? false)
       },
     }),
     {

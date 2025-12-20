@@ -10,6 +10,7 @@ import type {
   RegistrationCheckResponse,
   VerifyEmailResponse,
   LoginErrorResponse,
+  AccountStatus,
 } from "@/types"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
@@ -19,6 +20,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
 /**
  * Check if registration is available for an invite token
  * GET /api/v1/auth/registration/check?inviteToken={token}
+ * Backend returns: ApiResponse<Map<String, Object>> with available, message, email
  */
 export async function checkRegistration(inviteToken: string): Promise<RegistrationCheckResponse> {
   const response = await fetch(
@@ -28,7 +30,16 @@ export async function checkRegistration(inviteToken: string): Promise<Registrati
       headers: { "Content-Type": "application/json" },
     }
   )
-  return response.json()
+  const data: ApiResponse<RegistrationCheckResponse> = await response.json()
+  // Backend wraps response in ApiResponse, extract the data
+  if (data.success && data.data) {
+    return data.data
+  }
+  // Return a default error response if unsuccessful
+  return {
+    available: false,
+    message: data.message || "Failed to check registration availability"
+  }
 }
 
 // ===== Login =====
@@ -104,7 +115,13 @@ export async function verifyEmail(token: string): Promise<VerifyEmailResponse> {
       headers: { "Content-Type": "application/json" },
     }
   )
-  return response.json()
+  const data: ApiResponse<{ accountStatus?: AccountStatus }> = await response.json()
+  
+  return {
+    success: data.success,
+    message: data.message || (data.success ? "Email verified successfully" : "Verification failed"),
+    accountStatus: data.data?.accountStatus
+  }
 }
 
 /**
