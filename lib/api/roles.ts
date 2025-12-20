@@ -1,12 +1,12 @@
 import { apiClient } from "./client"
 import type { ApiResponse, Role, CreateRoleRequest, UpdateRoleRequest, AssignRoleRequest } from "@/types"
 
-export async function getRoles(): Promise<Role[]> {
-  return apiClient<Role[]>("/api/v1/rbac/roles")
+export async function getRoles(): Promise<ApiResponse<Role[]>> {
+  return apiClient<ApiResponse<Role[]>>("/api/v1/rbac/roles")
 }
 
-export async function getRoleById(id: string): Promise<Role> {
-  return apiClient<Role>(`/api/v1/rbac/roles/${id}`)
+export async function getRoleById(id: string): Promise<ApiResponse<Role>> {
+  return apiClient<ApiResponse<Role>>(`/api/v1/rbac/roles/${id}`)
 }
 
 export async function createRole(data: CreateRoleRequest): Promise<ApiResponse<Role>> {
@@ -43,10 +43,10 @@ export async function revokeRole(data: AssignRoleRequest): Promise<ApiResponse<n
   })
 }
 
-export async function getUserRoles(userId: number): Promise<string[]> {
-  return apiClient<string[]>(`/api/v1/rbac/roles/user/${userId}`)
+export async function getUserRoles(userId: string): Promise<ApiResponse<string[]>> {
+  return apiClient<ApiResponse<string[]>>(`/api/v1/rbac/roles/user/${userId}`)
 }
 
-export async function getRolePermissions(roleId: number): Promise<string[]> {
-  return apiClient<string[]>(`/api/v1/rbac/roles/${roleId}/permissions`)
+export async function getRolePermissions(roleId: string): Promise<ApiResponse<string[]>> {
+  return apiClient<ApiResponse<string[]>>(`/api/v1/rbac/roles/${roleId}/permissions`)
 }

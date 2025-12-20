@@ -146,8 +146,10 @@ export interface PendingUser extends User {
 
 export interface ApiResponse<T> {
   success: boolean
-  message: string
+  message?: string
+  error?: string
   data?: T
+  timestamp?: string
 }
 
 export interface PaginatedResponse<T> {
@@ -169,8 +171,8 @@ export interface Role {
   description: string
   level: number
   permissions: string[]
-  userCount: number
-  isSystemRole: boolean
+  userCount?: number
+  isSystem: boolean
   createdAt: string
   updatedAt: string
 }
@@ -188,7 +190,7 @@ export interface UpdateRoleRequest {
 }
 
 export interface AssignRoleRequest {
-  userId: number
+  userId: string
   roleName: string
 }
 

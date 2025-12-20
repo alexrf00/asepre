@@ -27,8 +27,12 @@ export default function RolesPage() {
   const loadRoles = useCallback(async () => {
     setIsLoading(true)
     try {
-      const data = await getRoles()
-      setRoles(data)
+      const response = await getRoles()
+      if (response.success && response.data) {
+        setRoles(response.data)
+      } else {
+        toast.error(response.error || "Failed to load roles")
+      }
     } catch {
       toast.error("Failed to load roles")
     } finally {
@@ -65,7 +69,7 @@ export default function RolesPage() {
         toast.success("Role deleted successfully")
         loadRoles()
       } else {
-        toast.error(response.message)
+        toast.error(response.error || response.message || "Failed to delete role")
       }
     } catch {
       toast.error("Failed to delete role")

@@ -48,8 +48,12 @@ export function AssignRolesDialog({ user, open, onOpenChange, onSuccess }: Assig
   const loadRoles = async () => {
     setIsLoading(true)
     try {
-      const data = await getRoles()
-      setRoles(data)
+      const response = await getRoles()
+      if (response.success && response.data) {
+        setRoles(response.data)
+      } else {
+        toast.error(response.error || "Failed to load roles")
+      }
     } catch {
       toast.error("Failed to load roles")
     } finally {
