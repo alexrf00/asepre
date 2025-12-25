@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import useSWR from "swr"
 
+import { ProtectedRoute } from "@/components/layout/protected-route"
 import { ContractsDataTable } from "@/components/business/contracts/contracts-data-table"
 import { getAllContracts } from "@/lib/api/contracts"
 import { getActiveClients } from "@/lib/api/clients"
@@ -82,25 +83,27 @@ export default function ContractsPage() {
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Contracts</h1>
-        <p className="text-muted-foreground">Manage client service contracts and agreements</p>
-      </div>
+    <ProtectedRoute permission="CONTRACTS_READ">
+      <div className="container mx-auto py-6 space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Contracts</h1>
+          <p className="text-muted-foreground">Manage client service contracts and agreements</p>
+        </div>
 
-      <ContractsDataTable
-        contracts={contractsResponse?.data ?? null}
-        clients={clients}
-        isLoading={isLoading}
-        page={page}
-        onPageChange={handlePageChange}
-        statusFilter={statusFilter}
-        onStatusFilterChange={handleStatusFilterChange}
-        clientFilter={clientFilter}
-        onClientFilterChange={handleClientFilterChange}
-        onRefresh={handleRefresh}
-        isRefreshing={isValidating}
-      />
-    </div>
+        <ContractsDataTable
+          contracts={contractsResponse?.data ?? null}
+          clients={clients}
+          isLoading={isLoading}
+          page={page}
+          onPageChange={handlePageChange}
+          statusFilter={statusFilter}
+          onStatusFilterChange={handleStatusFilterChange}
+          clientFilter={clientFilter}
+          onClientFilterChange={handleClientFilterChange}
+          onRefresh={handleRefresh}
+          isRefreshing={isValidating}
+        />
+      </div>
+    </ProtectedRoute>
   )
 }

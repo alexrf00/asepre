@@ -83,13 +83,13 @@ export function InvoiceActions({ invoice, onSuccess, variant = "buttons" }: Invo
       case "DRAFT":
         return (
           <>
-            <PermissionGate permission="BUSINESS_INVOICE_UPDATE">
+            <PermissionGate permission="INVOICES_WRITE">
               <Button size={variant === "compact" ? "sm" : "default"} onClick={() => setIssueDialogOpen(true)}>
                 <Send className="mr-2 h-4 w-4" />
                 Issue
               </Button>
             </PermissionGate>
-            <PermissionGate permission="BUSINESS_INVOICE_DELETE">
+            <PermissionGate permission="INVOICES_CANCEL">
               <Button
                 size={variant === "compact" ? "sm" : "default"}
                 variant="destructive"
@@ -105,7 +105,7 @@ export function InvoiceActions({ invoice, onSuccess, variant = "buttons" }: Invo
       case "PARTIAL":
       case "PAID":
         return (
-          <PermissionGate permission="BUSINESS_INVOICE_DELETE">
+          <PermissionGate permission="INVOICES_CANCEL">
             <Button
               size={variant === "compact" ? "sm" : "default"}
               variant="destructive"

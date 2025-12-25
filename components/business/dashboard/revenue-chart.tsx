@@ -101,7 +101,7 @@ export function RevenueChart({ data, isLoading }: RevenueChartProps) {
                 tick={{ fontSize: 12 }}
                 tickLine={false}
                 axisLine={false}
-                tickFormatter={(value) => formatCurrency(value, "DOP").replace("RD$", "").trim()}
+                tickFormatter={(value) => formatCurrency(value, "DOP").trim()}
                 className="text-muted-foreground"
               />
               <Tooltip

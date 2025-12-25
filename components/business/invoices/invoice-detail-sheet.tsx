@@ -299,7 +299,7 @@ export function InvoiceDetailSheet({ invoiceId, open, onOpenChange, onRefresh }:
                 {/* Actions */}
                 <div className="flex flex-wrap gap-2 pt-4">
                   {invoice.status === "DRAFT" && (
-                    <PermissionGate permission="BUSINESS_INVOICE_UPDATE">
+                    <PermissionGate permission="INVOICES_WRITE">
                       <Button onClick={() => setIssueDialogOpen(true)}>
                         <Send className="mr-2 h-4 w-4" />
                         Issue Invoice
@@ -312,7 +312,7 @@ export function InvoiceDetailSheet({ invoiceId, open, onOpenChange, onRefresh }:
                   )}
 
                   {(invoice.status === "ISSUED" || invoice.status === "PARTIAL" || invoice.status === "PAID") && (
-                    <PermissionGate permission="BUSINESS_INVOICE_DELETE">
+                    <PermissionGate permission="INVOICES_CANCEL">
                       <Button variant="destructive" onClick={() => setVoidDialogOpen(true)}>
                         <Ban className="mr-2 h-4 w-4" />
                         Void Invoice

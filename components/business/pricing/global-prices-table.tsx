@@ -86,7 +86,7 @@ export function GlobalPricesTable() {
               <Button variant="outline" size="icon" onClick={handleRefresh} disabled={isRefreshing}>
                 <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
               </Button>
-              <PermissionGate permission="BUSINESS_PRICE_GLOBAL_MANAGE">
+              <PermissionGate permission="PRICING_WRITE">
                 <Button onClick={() => setSetPriceDialogOpen(true)}>
                   <DollarSign className="mr-2 h-4 w-4" />
                   Set Global Price
@@ -144,7 +144,7 @@ export function GlobalPricesTable() {
                         title="No global prices set"
                         description="Set global prices for services to define default pricing"
                         action={
-                          <PermissionGate permission="BUSINESS_PRICE_GLOBAL_MANAGE">
+                          <PermissionGate permission="PRICING_WRITE">
                             <Button onClick={() => setSetPriceDialogOpen(true)}>Set Global Price</Button>
                           </PermissionGate>
                         }

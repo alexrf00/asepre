@@ -8,7 +8,7 @@ import { PriceLookupTool } from "@/components/business/pricing/price-lookup-tool
 
 export default function PricingPage() {
   return (
-    <PermissionGate permission="BUSINESS_PRICE_READ" showAccessDenied>
+    <PermissionGate permission="PRICING_READ" showAccessDenied>
       <div className="space-y-6">
         {/* Header */}
         <div>

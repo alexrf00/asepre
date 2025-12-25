@@ -94,7 +94,7 @@ export default function ServicesPage() {
   }
 
   return (
-    <ProtectedRoute requiredPermissions={["BUSINESS_SERVICE_READ"]}>
+    <ProtectedRoute permission="SERVICES_READ">
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Services Catalog</h1>

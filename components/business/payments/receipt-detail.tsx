@@ -34,7 +34,7 @@ export function ReceiptDetail({ receipt, onVoid, onPrint }: ReceiptDetailProps) 
             Print
           </Button>
           {!isVoid && (
-            <PermissionGate permission="BUSINESS_RECEIPT_DELETE">
+            <PermissionGate permission="RECEIPTS_VOID">
               <Button variant="destructive" size="sm" onClick={onVoid}>
                 <Ban className="mr-2 h-4 w-4" />
                 Void

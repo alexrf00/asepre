@@ -163,7 +163,7 @@ export function ServicesDataTable({
               <Button variant="outline" size="icon" onClick={onRefresh} disabled={isRefreshing}>
                 <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
               </Button>
-              <PermissionGate permission="BUSINESS_SERVICE_CREATE">
+              <PermissionGate permission="SERVICES_WRITE">
                 <Button onClick={() => setCreateDialogOpen(true)}>Add Service</Button>
               </PermissionGate>
             </div>
@@ -239,7 +239,7 @@ export function ServicesDataTable({
                         }
                         action={
                           !searchQuery && (
-                            <PermissionGate permission="BUSINESS_SERVICE_CREATE">
+                            <PermissionGate permission="SERVICES_WRITE">
                               <Button onClick={() => setCreateDialogOpen(true)}>Add Service</Button>
                             </PermissionGate>
                           )
@@ -293,14 +293,14 @@ export function ServicesDataTable({
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <PermissionGate permission="BUSINESS_SERVICE_UPDATE">
+                            <PermissionGate permission="SERVICES_WRITE">
                               <DropdownMenuItem onClick={() => handleEdit(service)}>
                                 <Pencil className="mr-2 h-4 w-4" />
                                 Edit
                               </DropdownMenuItem>
                             </PermissionGate>
                             {service.active && (
-                              <PermissionGate permission="BUSINESS_SERVICE_DELETE">
+                              <PermissionGate permission="SERVICES_DELETE">
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
                                   onClick={() => handleDeactivate(service)}

@@ -2,6 +2,7 @@
 
 import { format } from "date-fns"
 import useSWR from "swr"
+import { ProtectedRoute } from "@/components/layout/protected-route"
 import { BusinessStatsCards } from "@/components/business/dashboard/business-stats-cards"
 import { FinancialSummary } from "@/components/business/dashboard/financial-summary"
 import { RevenueChart } from "@/components/business/dashboard/revenue-chart"
@@ -40,34 +41,36 @@ export default function BusinessDashboardPage() {
   }
 
   return (
-    <div className="container py-6 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-1">
-        <h1 className="text-3xl font-bold tracking-tight">Business Dashboard</h1>
-        <div className="flex items-center gap-2 text-muted-foreground">
-          <p>Overview of your business operations</p>
-          <span className="text-xs">· Last updated: {format(new Date(), "MMM d, yyyy 'at' h:mm a")}</span>
+    <ProtectedRoute permission="DASHBOARD_READ">
+      <div className="container py-6 space-y-6">
+        {/* Header */}
+        <div className="flex flex-col gap-1">
+          <h1 className="text-3xl font-bold tracking-tight">Business Dashboard</h1>
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <p>Overview of your business operations</p>
+            <span className="text-xs">· Last updated: {format(new Date(), "MMM d, yyyy 'at' h:mm a")}</span>
+          </div>
         </div>
+
+        {/* Alerts Section */}
+        <InvoiceAlerts stats={stats} invoiceStats={invoiceStats} isLoading={loadingStats || loadingInvoiceStats} />
+
+        {/* Key Metrics Cards */}
+        <BusinessStatsCards stats={stats} isLoading={loadingStats} />
+
+        {/* Financial Overview and Quick Actions */}
+        <div className="grid gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2">
+            <FinancialSummary stats={stats} isLoading={loadingStats} />
+          </div>
+          <div>
+            <QuickActions onRecurringInvoicingSuccess={handleRefresh} />
+          </div>
+        </div>
+
+        {/* Revenue Chart */}
+        <RevenueChart data={revenueData} isLoading={loadingRevenue} />
       </div>
-
-      {/* Alerts Section */}
-      <InvoiceAlerts stats={stats} invoiceStats={invoiceStats} isLoading={loadingStats || loadingInvoiceStats} />
-
-      {/* Key Metrics Cards */}
-      <BusinessStatsCards stats={stats} isLoading={loadingStats} />
-
-      {/* Financial Overview and Quick Actions */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <FinancialSummary stats={stats} isLoading={loadingStats} />
-        </div>
-        <div>
-          <QuickActions onRecurringInvoicingSuccess={handleRefresh} />
-        </div>
-      </div>
-
-      {/* Revenue Chart */}
-      <RevenueChart data={revenueData} isLoading={loadingRevenue} />
-    </div>
+    </ProtectedRoute>
   )
 }

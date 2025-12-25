@@ -123,7 +123,7 @@ export function ContractStatusActions({ contract, onStatusChange }: ContractStat
     switch (contract.status) {
       case "DRAFT":
         return (
-          <PermissionGate permission="BUSINESS_CONTRACT_UPDATE">
+          <PermissionGate permission="CONTRACTS_WRITE">
             <div className="space-y-4">
               {!activationCheck.allowed && (
                 <Alert variant="destructive">
@@ -163,7 +163,7 @@ export function ContractStatusActions({ contract, onStatusChange }: ContractStat
         )
       case "ACTIVE":
         return (
-          <PermissionGate permission="BUSINESS_CONTRACT_UPDATE">
+          <PermissionGate permission="CONTRACTS_WRITE">
             <div className="flex flex-col sm:flex-row gap-2">
               <Button variant="outline" onClick={() => setAction("suspend")}>
                 <Pause className="mr-2 h-4 w-4" />
@@ -178,7 +178,7 @@ export function ContractStatusActions({ contract, onStatusChange }: ContractStat
         )
       case "SUSPENDED":
         return (
-          <PermissionGate permission="BUSINESS_CONTRACT_UPDATE">
+          <PermissionGate permission="CONTRACTS_WRITE">
             <div className="flex flex-col sm:flex-row gap-2">
               <Button onClick={() => setAction("reactivate")}>
                 <RotateCcw className="mr-2 h-4 w-4" />

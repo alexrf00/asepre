@@ -106,7 +106,7 @@ export default function ClientsPage() {
 
   if (isLoading && !clients) {
     return (
-      <ProtectedRoute permission="BUSINESS_CLIENT_READ">
+      <ProtectedRoute permission="CLIENTS_READ">
         <div className="flex h-[50vh] items-center justify-center">
           <div className="flex flex-col items-center gap-4">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -118,7 +118,7 @@ export default function ClientsPage() {
   }
 
   return (
-    <ProtectedRoute permission="BUSINESS_CLIENT_READ">
+    <ProtectedRoute permission="CLIENTS_READ">
       <div className="space-y-6">
         {/* Header */}
         <div>

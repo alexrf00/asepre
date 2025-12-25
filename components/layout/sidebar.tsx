@@ -52,13 +52,13 @@ const adminNavItems = [
     title: "Users",
     href: "/users",
     icon: Users,
-    permissions: ["AUTH_USER_READ", "VIEW_USERS"],
+    permissions: ["AUTH_USER_READ", "AUTH_USER_LIST"],
   },
   {
     title: "Roles",
     href: "/roles",
     icon: Shield,
-    permissions: ["AUTH_ROLE_READ", "VIEW_ROLES"],
+    permissions: ["AUTH_ROLE_READ"],
   },
   {
     title: "User Approval",
@@ -74,48 +74,49 @@ const adminNavItems = [
   },
 ]
 
+// Business navigation items with correct backend permission names (from V13 migration)
 const businessNavItems = [
   {
     title: "Dashboard",
     href: "/business",
     icon: LayoutDashboard,
-    permissions: [], // Accessible to all authenticated users
+    permissions: ["DASHBOARD_READ"],
   },
   {
     title: "Clients",
     href: "/business/clients",
     icon: Users,
-    permissions: ["BUSINESS_CLIENT_READ"],
+    permissions: ["CLIENTS_READ"],
   },
   {
     title: "Services",
     href: "/business/services",
     icon: Package,
-    permissions: ["BUSINESS_SERVICE_READ"],
+    permissions: ["SERVICES_READ"],
   },
   {
     title: "Pricing",
     href: "/business/pricing",
     icon: DollarSign,
-    permissions: ["BUSINESS_PRICE_READ"],
+    permissions: ["PRICING_READ"],
   },
   {
     title: "Contracts",
     href: "/business/contracts",
     icon: FileText,
-    permissions: ["BUSINESS_CONTRACT_READ"],
+    permissions: ["CONTRACTS_READ"],
   },
   {
     title: "Invoices",
     href: "/business/invoices",
     icon: Receipt,
-    permissions: ["BUSINESS_INVOICE_READ"],
+    permissions: ["INVOICES_READ"],
   },
   {
     title: "Payments",
     href: "/business/payments",
     icon: CreditCard,
-    permissions: ["BUSINESS_PAYMENT_READ"],
+    permissions: ["PAYMENTS_READ"],
   },
 ]
 
@@ -216,28 +217,28 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                         ? { count: overdueInvoices, variant: "destructive" as const }
                         : undefined
 
-                    return item.permissions.length > 0 ? (
+                    return (
                       <PermissionGate key={item.href} permissions={item.permissions}>
                         <NavItem item={item} isActive={pathname === item.href} badge={badge} />
                       </PermissionGate>
-                    ) : (
-                      <NavItem key={item.href} item={item} isActive={pathname === item.href} badge={badge} />
                     )
                   })}
                 </CollapsibleContent>
               </Collapsible>
             ) : (
-              <Link
-                href="/business"
-                className={cn(
-                  "flex items-center justify-center rounded-lg px-2 py-2 text-sm transition-colors",
-                  pathname.startsWith("/business")
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                )}
-              >
-                <Briefcase className="h-4 w-4 shrink-0" />
-              </Link>
+              <PermissionGate permissions={["DASHBOARD_READ", "CLIENTS_READ", "INVOICES_READ"]}>
+                <Link
+                  href="/business"
+                  className={cn(
+                    "flex items-center justify-center rounded-lg px-2 py-2 text-sm transition-colors",
+                    pathname.startsWith("/business")
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                  )}
+                >
+                  <Briefcase className="h-4 w-4 shrink-0" />
+                </Link>
+              </PermissionGate>
             )}
           </div>
 

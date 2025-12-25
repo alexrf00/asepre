@@ -69,7 +69,7 @@ export function PaymentsDataTable({
             <Button variant="outline" size="icon" onClick={onRefresh} disabled={isRefreshing}>
               <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
             </Button>
-            <PermissionGate permission="BUSINESS_PAYMENT_CREATE">
+            <PermissionGate permission="PAYMENTS_WRITE">
               <Button onClick={onRecordPayment}>
                 <Plus className="mr-2 h-4 w-4" />
                 Record Payment
@@ -189,7 +189,7 @@ export function PaymentsDataTable({
                         clientFilter === "all" &&
                         !startDate &&
                         !endDate && (
-                          <PermissionGate permission="BUSINESS_PAYMENT_CREATE">
+                          <PermissionGate permission="PAYMENTS_WRITE">
                             <Button onClick={onRecordPayment}>
                               <Plus className="mr-2 h-4 w-4" />
                               Record Payment

@@ -159,7 +159,7 @@ export function PaymentDetailSheet({ paymentId, open, onOpenChange, onRefresh }:
 
                 {/* Allocate Button */}
                 {payment.amountUnallocated > 0 && (
-                  <PermissionGate permission="BUSINESS_PAYMENT_UPDATE">
+                  <PermissionGate permission="PAYMENTS_WRITE">
                     <Button className="w-full" onClick={() => setAllocateDialogOpen(true)}>
                       Allocate Remaining
                     </Button>

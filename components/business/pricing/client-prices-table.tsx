@@ -93,7 +93,7 @@ export function ClientPricesTable() {
                   <Button variant="outline" size="icon" onClick={handleRefresh} disabled={isRefreshing}>
                     <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
                   </Button>
-                  <PermissionGate permission="BUSINESS_PRICE_CLIENT_MANAGE">
+                  <PermissionGate permission="PRICING_WRITE">
                     <Button onClick={() => setSetPriceDialogOpen(true)}>
                       <DollarSign className="mr-2 h-4 w-4" />
                       Set Client Price
@@ -171,7 +171,7 @@ export function ClientPricesTable() {
                           title="No custom prices"
                           description={`${selectedClient?.name ?? "This client"} has no custom price overrides. Global prices will apply.`}
                           action={
-                            <PermissionGate permission="BUSINESS_PRICE_CLIENT_MANAGE">
+                            <PermissionGate permission="PRICING_WRITE">
                               <Button onClick={() => setSetPriceDialogOpen(true)}>Set Client Price</Button>
                             </PermissionGate>
                           }

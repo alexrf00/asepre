@@ -31,7 +31,7 @@ const mockAuditLogs = [
     id: 2,
     action: "ROLE_ASSIGNED",
     user: "admin@example.com",
-    details: "Assigned USER_ADMIN to jane.smith@example.com",
+    details: "Assigned ADMINISTRADOR_GENERAL to jane.smith@example.com",
     ip: "192.168.1.100",
     timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
   },

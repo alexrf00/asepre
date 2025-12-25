@@ -6,11 +6,13 @@ import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuthStore } from "@/lib/store/auth-store"
 import { FullPageLoader } from "@/components/common/loading-spinner"
+import { ADMIN_GENERAL_PERMISSIONS } from "@/lib/utils/permissions"
 
 interface ProtectedRouteProps {
   children: React.ReactNode
   permission?: string
   permissions?: string[]
+  requiredPermissions?: string[] // Alias for permissions
   role?: string
   roles?: string[]
   requireAll?: boolean
@@ -20,6 +22,7 @@ export function ProtectedRoute({
   children,
   permission,
   permissions = [],
+  requiredPermissions = [],
   role,
   roles = [],
   requireAll = false,
@@ -47,31 +50,53 @@ export function ProtectedRoute({
     return <FullPageLoader message="Redirecting to login..." />
   }
 
-  // Check permissions
-  const allPermissions = permission ? [permission, ...permissions] : permissions
+  // Collect all permissions to check (support both permissions and requiredPermissions)
+  const allPermissions = [
+    ...(permission ? [permission] : []),
+    ...permissions,
+    ...requiredPermissions,
+  ]
   const allRoles = role ? [role, ...roles] : roles
 
   let hasAccess = true
 
-  if (allPermissions.length > 0) {
-    if (requireAll) {
-      hasAccess = allPermissions.every((p) => hasPermission(p))
-    } else {
-      hasAccess = hasAnyPermission(allPermissions)
-    }
-  }
-
-  if (allRoles.length > 0 && hasAccess) {
-    if (requireAll) {
-      hasAccess = allRoles.every((r) => hasRole(r))
-    } else {
-      hasAccess = hasAnyRole(allRoles)
-    }
-  }
-
-  // SUPERADMIN always has access - use ?. for safety
-  if (user?.roles?.includes("SUPERADMIN")) {
+  // SUPERADMIN always has access
+  if (user?.roles?.includes("SUPERADMIN") || user?.role?.name === "SUPERADMIN") {
     hasAccess = true
+  } else if (user?.roles?.includes("ADMINISTRADOR_GENERAL") || user?.role?.name === "ADMINISTRADOR_GENERAL") {
+    // ADMINISTRADOR_GENERAL has access to specific permissions
+    if (allPermissions.length > 0) {
+      if (requireAll) {
+        hasAccess = allPermissions.every((p) => ADMIN_GENERAL_PERMISSIONS.includes(p) || hasPermission(p))
+      } else {
+        hasAccess = allPermissions.some((p) => ADMIN_GENERAL_PERMISSIONS.includes(p) || hasPermission(p))
+      }
+    }
+    // Check roles if needed
+    if (allRoles.length > 0 && hasAccess) {
+      if (requireAll) {
+        hasAccess = allRoles.every((r) => r === "ADMINISTRADOR_GENERAL" || hasRole(r))
+      } else {
+        hasAccess = allRoles.some((r) => r === "ADMINISTRADOR_GENERAL" || hasRole(r))
+      }
+    }
+  } else {
+    // Other users - check permissions normally
+    if (allPermissions.length > 0) {
+      if (requireAll) {
+        hasAccess = allPermissions.every((p) => hasPermission(p))
+      } else {
+        hasAccess = hasAnyPermission(allPermissions)
+      }
+    }
+
+    if (allRoles.length > 0 && hasAccess) {
+      if (requireAll) {
+        hasAccess = allRoles.every((r) => hasRole(r))
+      } else {
+        hasAccess = hasAnyRole(allRoles)
+      }
+    }
   }
 
   if (!hasAccess) {

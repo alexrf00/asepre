@@ -67,8 +67,9 @@ export default function InvoicesPage() {
   const stats = statsRes?.data ?? null
   const clients = clientsRes?.data ?? []
 
-  const isSuperAdmin = user?.roles?.includes("SUPERADMIN")
-  const canCreate = user?.permissions?.includes("BUSINESS_INVOICE_CREATE") || isSuperAdmin
+  const isSuperAdmin = user?.roles?.includes("SUPERADMIN") || user?.role?.name === "SUPERADMIN"
+  const isAdminGeneral = user?.roles?.includes("ADMINISTRADOR_GENERAL") || user?.role?.name === "ADMINISTRADOR_GENERAL"
+  const canCreate = user?.permissions?.includes("INVOICES_WRITE") || isSuperAdmin || isAdminGeneral
 
   const handleViewInvoice = (invoice: Invoice) => {
     setSelectedInvoice(invoice)
@@ -91,7 +92,7 @@ export default function InvoicesPage() {
   }
 
   return (
-    <PermissionGate permission="BUSINESS_INVOICE_READ" showError>
+    <PermissionGate permission="INVOICES_READ" showError>
       <div className="container py-6 space-y-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Invoices</h1>

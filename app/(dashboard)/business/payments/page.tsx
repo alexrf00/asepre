@@ -55,7 +55,7 @@ export default function PaymentsPage() {
   const payments = paymentsRes?.data ?? null
   const clients = clientsRes?.data ?? []
 
-  const isSuperAdmin = user?.roles?.includes("SUPERADMIN")
+  const isSuperAdmin = user?.roles?.includes("SUPERADMIN") || user?.role?.name === "SUPERADMIN"
 
   const handleTabChange = (value: string) => {
     const params = new URLSearchParams(searchParams.toString())
@@ -74,7 +74,7 @@ export default function PaymentsPage() {
   }
 
   return (
-    <PermissionGate permission="BUSINESS_PAYMENT_READ" showError>
+    <PermissionGate permission="PAYMENTS_READ" showError>
       <div className="container py-6 space-y-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Payments & Receipts</h1>

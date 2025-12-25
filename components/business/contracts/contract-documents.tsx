@@ -118,7 +118,7 @@ export function ContractDocuments({ contractId, hasCurrentDocument, readOnly = f
                 </Button>
               )}
               {!readOnly && (
-                <PermissionGate permission="BUSINESS_CONTRACT_UPDATE">
+                <PermissionGate permission="CONTRACTS_WRITE">
                   <Button size="sm" onClick={() => setUploadDialogOpen(true)}>
                     <Upload className="mr-2 h-4 w-4" />
                     Upload
@@ -138,7 +138,7 @@ export function ContractDocuments({ contractId, hasCurrentDocument, readOnly = f
               <FileText className="h-12 w-12 text-muted-foreground/50 mb-3" />
               <p className="text-muted-foreground">No documents uploaded yet</p>
               {!readOnly && (
-                <PermissionGate permission="BUSINESS_CONTRACT_UPDATE">
+                <PermissionGate permission="CONTRACTS_WRITE">
                   <Button
                     variant="outline"
                     size="sm"

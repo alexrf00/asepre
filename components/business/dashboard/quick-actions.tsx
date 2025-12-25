@@ -58,7 +58,7 @@ export function QuickActions({ onRecurringInvoicingSuccess }: QuickActionsProps)
           <CardDescription>Common tasks and operations</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          <PermissionGate permission="BUSINESS_CLIENT_CREATE">
+          <PermissionGate permission="CLIENTS_WRITE">
             <Button variant="outline" className="w-full justify-start bg-transparent" asChild>
               <Link href="/business/clients?action=create">
                 <UserPlus className="mr-2 h-4 w-4" />
@@ -67,7 +67,7 @@ export function QuickActions({ onRecurringInvoicingSuccess }: QuickActionsProps)
             </Button>
           </PermissionGate>
 
-          <PermissionGate permission="BUSINESS_INVOICE_CREATE">
+          <PermissionGate permission="INVOICES_WRITE">
             <Button variant="outline" className="w-full justify-start bg-transparent" asChild>
               <Link href="/business/invoices?action=create">
                 <Receipt className="mr-2 h-4 w-4" />
@@ -76,7 +76,7 @@ export function QuickActions({ onRecurringInvoicingSuccess }: QuickActionsProps)
             </Button>
           </PermissionGate>
 
-          <PermissionGate permission="BUSINESS_PAYMENT_CREATE">
+          <PermissionGate permission="PAYMENTS_WRITE">
             <Button variant="outline" className="w-full justify-start bg-transparent" asChild>
               <Link href="/business/payments?action=record">
                 <CreditCard className="mr-2 h-4 w-4" />

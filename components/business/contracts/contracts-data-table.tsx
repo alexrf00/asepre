@@ -105,7 +105,7 @@ export function ContractsDataTable({
               <Button variant="outline" size="icon" onClick={onRefresh} disabled={isRefreshing}>
                 <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
               </Button>
-              <PermissionGate permission="BUSINESS_CONTRACT_CREATE">
+              <PermissionGate permission="CONTRACTS_WRITE">
                 <Button onClick={() => setCreateSheetOpen(true)}>
                   <Plus className="mr-2 h-4 w-4" />
                   New Contract
@@ -207,7 +207,7 @@ export function ContractsDataTable({
                         action={
                           statusFilter === "all" &&
                           clientFilter === "all" && (
-                            <PermissionGate permission="BUSINESS_CONTRACT_CREATE">
+                            <PermissionGate permission="CONTRACTS_WRITE">
                               <Button onClick={() => setCreateSheetOpen(true)}>
                                 <Plus className="mr-2 h-4 w-4" />
                                 New Contract

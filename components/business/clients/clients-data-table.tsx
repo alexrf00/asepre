@@ -161,7 +161,7 @@ export function ClientsDataTable({
               <Button variant="outline" size="icon" onClick={onRefresh} disabled={isRefreshing}>
                 <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
               </Button>
-              <PermissionGate permission="BUSINESS_CLIENT_CREATE">
+              <PermissionGate permission="CLIENTS_WRITE">
                 <Button onClick={() => setCreateSheetOpen(true)}>Add Client</Button>
               </PermissionGate>
             </div>
@@ -247,7 +247,7 @@ export function ClientsDataTable({
                         action={
                           !searchQuery &&
                           statusFilter === "all" && (
-                            <PermissionGate permission="BUSINESS_CLIENT_CREATE">
+                            <PermissionGate permission="CLIENTS_WRITE">
                               <Button onClick={() => setCreateSheetOpen(true)}>Add Client</Button>
                             </PermissionGate>
                           )
@@ -296,7 +296,7 @@ export function ClientsDataTable({
                               <Eye className="mr-2 h-4 w-4" />
                               View Details
                             </DropdownMenuItem>
-                            <PermissionGate permission="BUSINESS_CLIENT_UPDATE">
+                            <PermissionGate permission="CLIENTS_WRITE">
                               <DropdownMenuItem
                                 onClick={(e) => {
                                   e.stopPropagation()
@@ -307,7 +307,7 @@ export function ClientsDataTable({
                                 Edit
                               </DropdownMenuItem>
                             </PermissionGate>
-                            <PermissionGate permission="BUSINESS_CLIENT_DELETE">
+                            <PermissionGate permission="CLIENTS_DELETE">
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
                                 onClick={(e) => {
