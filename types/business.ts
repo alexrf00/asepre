@@ -195,6 +195,18 @@ export type BillingIntervalUnit = "DAY" | "WEEK" | "MONTH" | "YEAR"
 /** Type of agreement - affects activation requirements */
 export type AgreementType = "WRITTEN" | "VERBAL"
 
+/** Term type - determines contract duration behavior */
+export type TermType = "EVERGREEN" | "FIXED_TERM" | "AUTO_RENEW"
+
+/** Billing type - one-time vs recurring invoices */
+export type BillingType = "RECURRING" | "ONE_TIME"
+
+/** Invoice timing - when invoices are generated relative to billing period */
+export type InvoiceTiming = "ADVANCE" | "ARREARS"
+
+/** Proration policy - how partial periods are handled */
+export type ProrationPolicy = "PRORATED" | "FULL_PERIOD" | "NO_CHARGE"
+
 /** Type of contract document */
 export type ContractDocumentType = "EXECUTED" | "AMENDMENT" | "ADDENDUM" | "ANNEX"
 
@@ -256,6 +268,11 @@ export interface ContractDto {
   autoInvoicingEnabled: boolean
   nextInvoiceDate?: string
   agreementType: AgreementType
+  // Enhanced billing configuration (Enterprise B2B spec)
+  termType: TermType
+  billingType: BillingType
+  invoiceTiming: InvoiceTiming
+  prorationPolicy: ProrationPolicy
   lines: ContractLineDto[]
   // Document metadata (for UI convenience)
   hasCurrentDocument: boolean
@@ -289,6 +306,11 @@ export interface CreateContractRequest {
   billingIntervalCount?: number
   agreementType?: AgreementType // Defaults to WRITTEN
   autoInvoicingEnabled?: boolean
+  // Enhanced billing configuration (Enterprise B2B spec)
+  termType?: TermType
+  billingType?: BillingType
+  invoiceTiming?: InvoiceTiming
+  prorationPolicy?: ProrationPolicy
   lines?: CreateContractLineRequest[]
 }
 
@@ -304,6 +326,11 @@ export interface UpdateContractRequest {
   billingIntervalCount?: number
   agreementType?: AgreementType
   autoInvoicingEnabled?: boolean
+  // Enhanced billing configuration (Enterprise B2B spec)
+  termType?: TermType
+  billingType?: BillingType
+  invoiceTiming?: InvoiceTiming
+  prorationPolicy?: ProrationPolicy
 }
 
 // Legacy type aliases for backwards compatibility
