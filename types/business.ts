@@ -104,6 +104,8 @@ export interface ServiceCatalog {
   billingUnitName: string
   /** Whether ITBIS (Dominican VAT) applies to this service */
   itbisApplicable: boolean
+  /** Default charge type when adding to contracts: RECURRING, ONE_TIME, or SETUP */
+  defaultChargeType?: ChargeType
   active: boolean
   createdAt: string
   updatedAt: string
@@ -207,6 +209,9 @@ export type InvoiceTiming = "ADVANCE" | "ARREARS"
 /** Proration policy - how partial periods are handled */
 export type ProrationPolicy = "PRORATED" | "FULL_PERIOD" | "NO_CHARGE"
 
+/** Charge type - determines how a line item is billed */
+export type ChargeType = "RECURRING" | "ONE_TIME" | "SETUP"
+
 /** Type of contract document */
 export type ContractDocumentType = "EXECUTED" | "AMENDMENT" | "ADDENDUM" | "ANNEX"
 
@@ -231,6 +236,10 @@ export interface ContractLineDto {
   active: boolean
   /** Calculated total: quantity * unitPrice */
   lineTotal: number
+  /** How this line is billed: RECURRING, ONE_TIME, or SETUP */
+  chargeType?: ChargeType
+  /** When a one-time/setup charge was billed (null if not yet billed or recurring) */
+  billedAt?: string
 }
 
 /** Document attached to a contract */
@@ -291,6 +300,8 @@ export interface CreateContractLineRequest {
   manualUnitPrice?: number
   itbisApplicable?: boolean
   scheduleNotes?: string
+  /** Charge type: RECURRING, ONE_TIME, or SETUP. Defaults to service's defaultChargeType or RECURRING */
+  chargeType?: ChargeType
 }
 
 /** Request payload for creating a new contract */
@@ -364,6 +375,8 @@ export interface InvoiceLine {
   lineTotal: number
   /** Order of the line in the invoice */
   lineOrder: number
+  /** Charge type at time of invoicing: RECURRING, ONE_TIME, or SETUP */
+  chargeType?: ChargeType
 }
 
 /** Invoice entity with full details including lines */
@@ -530,7 +543,25 @@ export interface CreatePaymentTypeRequest {
 /** Status of a receipt */
 export type ReceiptStatus = "ACTIVE" | "VOID"
 
-/** Receipt entity */
+/** Receipt line item - itemized service detail */
+export interface ReceiptLine {
+  id: string
+  invoiceLineId?: string
+  serviceId?: string
+  serviceCode?: string
+  serviceName?: string
+  description: string
+  quantity: number
+  unitPrice: number
+  itbisApplicable: boolean
+  itbisAmount: number
+  lineSubtotal: number
+  lineTotal: number
+  chargeType: ChargeType
+  lineOrder: number
+}
+
+/** Receipt entity with itemized lines */
 export interface Receipt {
   id: string
   receiptNumber: string
@@ -547,9 +578,104 @@ export interface Receipt {
   paymentTypeName: string
   paymentReference?: string
   status: ReceiptStatus
+  /** Itemized line items showing what was paid for */
+  lines: ReceiptLine[]
   createdAt: string
   voidedAt?: string
   voidReason?: string
+}
+
+// ===== CLIENT SUBSCRIPTION TYPES =====
+
+/** Status of a client subscription */
+export type SubscriptionStatus = "ACTIVE" | "SUSPENDED" | "CANCELLED" | "EXPIRED"
+
+/** Client subscription - direct service-to-client assignment */
+export interface ClientSubscription {
+  id: string
+  
+  // Client info
+  clientId: string
+  clientName: string
+  clientRnc: string
+  
+  // Service info
+  serviceId: string
+  serviceCode: string
+  serviceName: string
+  
+  // Contract reference (optional)
+  contractId?: string
+  contractNumber?: string
+  contractLineId?: string
+  
+  // Status
+  status: SubscriptionStatus
+  
+  // Pricing
+  quantity: number
+  billingUnitId: string
+  billingUnitCode: string
+  billingUnitName: string
+  unitPrice: number
+  currency: string
+  priceSource: PriceSource
+  
+  // Tax
+  itbisApplicable: boolean
+  
+  // Charge and billing
+  chargeType: ChargeType
+  billingFrequency: BillingFrequency
+  nextBillingDate?: string
+  lastInvoicedDate?: string
+  
+  // Term
+  startDate: string
+  endDate?: string
+  
+  // Notes
+  scheduleNotes?: string
+  notes?: string
+  
+  // Computed
+  lineTotal: number
+  hasContract: boolean
+  needsBilling: boolean
+  
+  // Audit
+  createdAt: string
+  updatedAt: string
+}
+
+/** Request payload for creating a new subscription */
+export interface CreateSubscriptionRequest {
+  clientId: string
+  serviceId: string
+  quantity?: number
+  billingUnitId: string
+  manualUnitPrice?: number
+  itbisApplicable?: boolean
+  chargeType?: ChargeType
+  billingFrequency?: BillingFrequency
+  startDate?: string
+  endDate?: string
+  scheduleNotes?: string
+  notes?: string
+  generateInvoice?: boolean
+}
+
+/** Request payload for updating a subscription */
+export interface UpdateSubscriptionRequest {
+  quantity?: number
+  billingUnitId?: string
+  unitPrice?: number
+  itbisApplicable?: boolean
+  billingFrequency?: string
+  nextBillingDate?: string
+  endDate?: string
+  scheduleNotes?: string
+  notes?: string
 }
 
 // ===== BUSINESS DASHBOARD TYPES =====

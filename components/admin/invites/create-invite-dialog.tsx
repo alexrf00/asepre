@@ -72,7 +72,7 @@ export function CreateInviteDialog({
     const fetchRoles = async () => {
       try {
         const rolesData = await getRoles()
-        setRoles(rolesData)
+        setRoles(rolesData.data ?? [])
       } catch (error) {
         console.error("Failed to fetch roles:", error)
       } finally {

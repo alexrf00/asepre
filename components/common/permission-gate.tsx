@@ -40,9 +40,9 @@ export function PermissionGate({
   let hasAccess = true
 
   // SUPERADMIN always has access
-  if (user?.roles?.includes("SUPERADMIN") || user?.role?.name === "SUPERADMIN") {
+  if (user?.roles?.includes("SUPERADMIN")) {
     hasAccess = true
-  } else if (user?.roles?.includes("ADMINISTRADOR_GENERAL") || user?.role?.name === "ADMINISTRADOR_GENERAL") {
+  } else if (user?.roles?.includes("ADMINISTRADOR_GENERAL")) {
     // ADMINISTRADOR_GENERAL has access to specific permissions
     if (allPermissions.length > 0) {
       if (requireAll) {

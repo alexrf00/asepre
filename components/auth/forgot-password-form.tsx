@@ -30,7 +30,7 @@ export function ForgotPasswordForm() {
   const onSubmit = async (data: ForgotPasswordFormData) => {
     setIsLoading(true)
     try {
-      const response = await forgotPassword(data)
+      const response = await forgotPassword(data.email)
       if (response.success) {
         setIsEmailSent(true)
         toast.success("Reset email sent!")

@@ -15,9 +15,9 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { ClientSelector } from "@/components/business/common/client-selector"
-import { InvoiceLinesEditor } from "./invoice-lines-editor"
+import { InvoiceLinesEditor, type InvoiceLineInput } from "./invoice-lines-editor"
 import { createInvoice } from "@/lib/api/invoices"
-import type { CreateInvoiceRequest, CreateInvoiceLineRequest } from "@/types/business"
+import type { CreateInvoiceRequest } from "@/types/business"
 
 const formSchema = z.object({
   clientId: z.string().min(1, "Client is required"),
@@ -28,15 +28,6 @@ const formSchema = z.object({
 
 type FormData = z.infer<typeof formSchema>
 
-interface InvoiceLineItem extends CreateInvoiceLineRequest {
-  id: string
-  serviceName?: string
-  billingUnitName?: string
-  lineSubtotal?: number
-  itbisAmount?: number
-  lineTotal?: number
-}
-
 interface CreateInvoiceFormProps {
   onSuccess: () => void
   onCancel: () => void
@@ -44,7 +35,7 @@ interface CreateInvoiceFormProps {
 
 export function CreateInvoiceForm({ onSuccess, onCancel }: CreateInvoiceFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [lines, setLines] = useState<InvoiceLineItem[]>([])
+  const [lines, setLines] = useState<InvoiceLineInput[]>([])
 
   const today = format(new Date(), "yyyy-MM-dd")
   const defaultDueDate = format(addDays(new Date(), 30), "yyyy-MM-dd")
@@ -89,7 +80,6 @@ export function CreateInvoiceForm({ onSuccess, onCancel }: CreateInvoiceFormProp
         notes: data.notes || undefined,
         lines: lines.map((line) => ({
           serviceId: line.serviceId,
-          contractLineId: line.contractLineId,
           description: line.description,
           quantity: line.quantity,
           billingUnitId: line.billingUnitId,

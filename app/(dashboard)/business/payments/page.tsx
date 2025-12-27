@@ -55,7 +55,7 @@ export default function PaymentsPage() {
   const payments = paymentsRes?.data ?? null
   const clients = clientsRes?.data ?? []
 
-  const isSuperAdmin = user?.roles?.includes("SUPERADMIN") || user?.role?.name === "SUPERADMIN"
+  const isSuperAdmin = user?.roles?.includes("SUPERADMIN")
 
   const handleTabChange = (value: string) => {
     const params = new URLSearchParams(searchParams.toString())

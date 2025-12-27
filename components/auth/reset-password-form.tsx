@@ -60,10 +60,7 @@ export function ResetPasswordForm() {
 
     setIsLoading(true)
     try {
-      const response = await resetPassword({
-        token,
-        newPassword: data.newPassword,
-      })
+      const response = await resetPassword(token, data.newPassword)
       if (response.success) {
         setIsSuccess(true)
         toast.success("Password reset successfully!")

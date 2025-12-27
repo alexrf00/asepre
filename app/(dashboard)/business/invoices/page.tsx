@@ -67,9 +67,9 @@ export default function InvoicesPage() {
   const stats = statsRes?.data ?? null
   const clients = clientsRes?.data ?? []
 
-  const isSuperAdmin = user?.roles?.includes("SUPERADMIN") || user?.role?.name === "SUPERADMIN"
-  const isAdminGeneral = user?.roles?.includes("ADMINISTRADOR_GENERAL") || user?.role?.name === "ADMINISTRADOR_GENERAL"
-  const canCreate = user?.permissions?.includes("INVOICES_WRITE") || isSuperAdmin || isAdminGeneral
+  const isSuperAdmin = user?.roles?.includes("SUPERADMIN")
+  const isAdminGeneral = user?.roles?.includes("ADMINISTRADOR_GENERAL")
+  const canCreate = user?.permissions?.includes("INVOICES_WRITE") || isSuperAdmin || isAdminGeneral || false
 
   const handleViewInvoice = (invoice: Invoice) => {
     setSelectedInvoice(invoice)

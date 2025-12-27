@@ -163,6 +163,15 @@ export interface PaginatedResponse<T> {
   empty: boolean
 }
 
+export interface PageInfo {
+  totalElements: number
+  totalPages: number
+  size: number
+  number: number
+  first: boolean
+  last: boolean
+}
+
 // ===== Role Types =====
 
 export interface Role {

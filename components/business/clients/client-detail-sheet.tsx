@@ -6,7 +6,9 @@ import { Mail, Phone, MapPin, Building, FileText, Calendar, User } from "lucide-
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ClientStatusBadge } from "./client-status-badge"
+import { ClientSubscriptionsCard } from "../subscriptions/client-subscriptions-card"
 import { formatDateTime } from "@/lib/utils/formatters"
 import type { Client } from "@/types/business"
 
@@ -85,7 +87,7 @@ export function ClientDetailSheet({ client, open, onOpenChange }: ClientDetailSh
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
+      <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
         <SheetHeader className="pb-4">
           <div className="flex items-start justify-between">
             <div>
@@ -98,81 +100,95 @@ export function ClientDetailSheet({ client, open, onOpenChange }: ClientDetailSh
           </div>
         </SheetHeader>
 
-        <div className="space-y-6">
-          {/* Basic Info */}
-          <DetailSection title="Basic Information">
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <Badge variant="secondary">{client.legalTypeName}</Badge>
-                <Badge variant="outline">{client.legalTypeCode}</Badge>
-              </div>
-              {client.rnc && <DetailRow icon={Building} label="RNC (Tax ID)" value={client.rnc} />}
-            </div>
-          </DetailSection>
+        <Tabs defaultValue="details" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="details">Details</TabsTrigger>
+            <TabsTrigger value="services">Services</TabsTrigger>
+          </TabsList>
 
-          <Separator />
-
-          {/* Contact Info */}
-          <DetailSection title="Contact Information">
-            <div className="space-y-3">
-              {client.contactPerson && <DetailRow icon={User} label="Contact Person" value={client.contactPerson} />}
-              <DetailRow icon={Mail} label="Primary Email" value={client.primaryEmail} />
-              <DetailRow icon={Mail} label="Secondary Email" value={client.secondaryEmail} />
-              <DetailRow icon={Phone} label="Primary Phone" value={client.primaryPhone} />
-              <DetailRow icon={Phone} label="Secondary Phone" value={client.secondaryPhone} />
-            </div>
-          </DetailSection>
-
-          <Separator />
-
-          {/* Addresses */}
-          <DetailSection title="Addresses">
-            <div className="space-y-4">
-              <AddressBlock
-                title="Billing Address"
-                address={{
-                  line1: client.billingAddressLine1,
-                  line2: client.billingAddressLine2,
-                  city: client.billingCity,
-                  province: client.billingProvince,
-                  postalCode: client.billingPostalCode,
-                }}
-              />
-              <AddressBlock
-                title="Service Address"
-                address={{
-                  line1: client.serviceAddressLine1,
-                  line2: client.serviceAddressLine2,
-                  city: client.serviceCity,
-                  province: client.serviceProvince,
-                  postalCode: client.servicePostalCode,
-                }}
-              />
-            </div>
-          </DetailSection>
-
-          {client.notes && (
-            <>
-              <Separator />
-              <DetailSection title="Notes">
-                <div className="flex items-start gap-3">
-                  <FileText className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-                  <p className="text-sm whitespace-pre-wrap">{client.notes}</p>
+          <TabsContent value="details" className="space-y-6 mt-4">
+            {/* Basic Info */}
+            <DetailSection title="Basic Information">
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary">{client.legalTypeName}</Badge>
+                  <Badge variant="outline">{client.legalTypeCode}</Badge>
                 </div>
-              </DetailSection>
-            </>
-          )}
+                {client.rnc && <DetailRow icon={Building} label="RNC (Tax ID)" value={client.rnc} />}
+              </div>
+            </DetailSection>
 
-          <Separator />
+            <Separator />
 
-          {/* Timestamps */}
-          <DetailSection title="Record Info">
-            <div className="space-y-3">
-              <DetailRow icon={Calendar} label="Created" value={formatDateTime(client.createdAt)} />
-              <DetailRow icon={Calendar} label="Last Updated" value={formatDateTime(client.updatedAt)} />
-            </div>
-          </DetailSection>
-        </div>
+            {/* Contact Info */}
+            <DetailSection title="Contact Information">
+              <div className="space-y-3">
+                {client.contactPerson && <DetailRow icon={User} label="Contact Person" value={client.contactPerson} />}
+                <DetailRow icon={Mail} label="Primary Email" value={client.primaryEmail} />
+                <DetailRow icon={Mail} label="Secondary Email" value={client.secondaryEmail} />
+                <DetailRow icon={Phone} label="Primary Phone" value={client.primaryPhone} />
+                <DetailRow icon={Phone} label="Secondary Phone" value={client.secondaryPhone} />
+              </div>
+            </DetailSection>
+
+            <Separator />
+
+            {/* Addresses */}
+            <DetailSection title="Addresses">
+              <div className="space-y-4">
+                <AddressBlock
+                  title="Billing Address"
+                  address={{
+                    line1: client.billingAddressLine1,
+                    line2: client.billingAddressLine2,
+                    city: client.billingCity,
+                    province: client.billingProvince,
+                    postalCode: client.billingPostalCode,
+                  }}
+                />
+                <AddressBlock
+                  title="Service Address"
+                  address={{
+                    line1: client.serviceAddressLine1,
+                    line2: client.serviceAddressLine2,
+                    city: client.serviceCity,
+                    province: client.serviceProvince,
+                    postalCode: client.servicePostalCode,
+                  }}
+                />
+              </div>
+            </DetailSection>
+
+            {client.notes && (
+              <>
+                <Separator />
+                <DetailSection title="Notes">
+                  <div className="flex items-start gap-3">
+                    <FileText className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                    <p className="text-sm whitespace-pre-wrap">{client.notes}</p>
+                  </div>
+                </DetailSection>
+              </>
+            )}
+
+            <Separator />
+
+            {/* Timestamps */}
+            <DetailSection title="Record Info">
+              <div className="space-y-3">
+                <DetailRow icon={Calendar} label="Created" value={formatDateTime(client.createdAt)} />
+                <DetailRow icon={Calendar} label="Last Updated" value={formatDateTime(client.updatedAt)} />
+              </div>
+            </DetailSection>
+          </TabsContent>
+
+          <TabsContent value="services" className="mt-4">
+            <ClientSubscriptionsCard 
+              clientId={client.id} 
+              clientName={client.name} 
+            />
+          </TabsContent>
+        </Tabs>
       </SheetContent>
     </Sheet>
   )

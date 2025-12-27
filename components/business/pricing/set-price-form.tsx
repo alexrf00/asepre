@@ -30,14 +30,21 @@ const setPriceSchema = z.object({
 
 type SetPriceFormData = z.infer<typeof setPriceSchema>
 
-interface SetPriceFormProps {
-  mode: "global" | "client"
-  /** Pre-selected client ID for client mode */
-  clientId?: string
-  onSubmit: (data: SetGlobalPriceRequest | SetClientPriceRequest) => Promise<void>
-  onCancel: () => void
-  isLoading?: boolean
-}
+type SetPriceFormProps = 
+  | {
+      mode: "global"
+      clientId?: never
+      onSubmit: (data: SetGlobalPriceRequest) => Promise<void>
+      onCancel: () => void
+      isLoading?: boolean
+    }
+  | {
+      mode: "client"
+      clientId?: string
+      onSubmit: (data: SetClientPriceRequest) => Promise<void>
+      onCancel: () => void
+      isLoading?: boolean
+    }
 
 export function SetPriceForm({ mode, clientId, onSubmit, onCancel, isLoading }: SetPriceFormProps) {
   const { data: servicesResponse, isLoading: isLoadingServices } = useSWR("active-services", () => getActiveServices())
@@ -77,14 +84,24 @@ export function SetPriceForm({ mode, clientId, onSubmit, onCancel, isLoading }: 
   }, [clientId, setValue])
 
   const handleFormSubmit = async (data: SetPriceFormData) => {
-    const payload: SetGlobalPriceRequest | SetClientPriceRequest = {
-      serviceId: data.serviceId,
-      price: data.price,
-      effectiveFrom: data.effectiveFrom?.toISOString(),
-      notes: data.notes || undefined,
-      ...(mode === "client" && { clientId: data.clientId }),
+    if (mode === "client") {
+      const payload: SetClientPriceRequest = {
+        serviceId: data.serviceId,
+        clientId: data.clientId!,
+        price: data.price,
+        effectiveFrom: data.effectiveFrom?.toISOString(),
+        notes: data.notes || undefined,
+      }
+      await (onSubmit as (data: SetClientPriceRequest) => Promise<void>)(payload)
+    } else {
+      const payload: SetGlobalPriceRequest = {
+        serviceId: data.serviceId,
+        price: data.price,
+        effectiveFrom: data.effectiveFrom?.toISOString(),
+        notes: data.notes || undefined,
+      }
+      await (onSubmit as (data: SetGlobalPriceRequest) => Promise<void>)(payload)
     }
-    await onSubmit(payload as SetGlobalPriceRequest | SetClientPriceRequest)
   }
 
   const formatCurrency = (value: string) => {

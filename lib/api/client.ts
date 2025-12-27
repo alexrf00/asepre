@@ -73,7 +73,7 @@ async function refreshAccessToken(): Promise<boolean> {
     }
 
     const data: ApiResponse<AuthResponse> = await response.json()
-    if (data.success && data.data) {
+    if (data.success && data.data?.accessToken && data.data?.refreshToken) {
       setTokens(data.data.accessToken, data.data.refreshToken)
       return true
     }

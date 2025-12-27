@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { getActiveServices, getBillingUnits } from "@/lib/api/services"
 import { resolvePrice } from "@/lib/api/pricing"
-import type { ServiceCatalog, BillingUnit, CreateContractLineRequest, PriceSource } from "@/types/business"
+import type { ServiceCatalog, BillingUnit, CreateContractLineRequest, PriceSource, ChargeType } from "@/types/business"
 
 interface ContractLineItem extends CreateContractLineRequest {
   id: string
@@ -20,6 +20,7 @@ interface ContractLineItem extends CreateContractLineRequest {
   resolvedPrice?: number
   priceSource?: PriceSource
   lineTotal?: number
+  chargeType?: ChargeType
 }
 
 interface ContractLinesEditorProps {
@@ -62,6 +63,7 @@ export function ContractLinesEditor({ clientId, lines, onChange, readOnly = fals
       billingUnitId: "",
       itbisApplicable: true,
       scheduleNotes: "",
+      chargeType: "RECURRING",
     }
     onChange([...lines, newLine])
   }
@@ -84,6 +86,10 @@ export function ContractLinesEditor({ clientId, lines, onChange, readOnly = fals
           updated.billingUnitId = service.billingUnitId
           updated.billingUnitName = service.billingUnitName
           updated.itbisApplicable = service.itbisApplicable
+          // Inherit default charge type from service if not manually set
+          if (service.defaultChargeType) {
+            updated.chargeType = service.defaultChargeType
+          }
         }
       }
 
@@ -178,6 +184,7 @@ export function ContractLinesEditor({ clientId, lines, onChange, readOnly = fals
                   <TableHead className="min-w-[200px]">Service</TableHead>
                   <TableHead className="min-w-[100px]">Quantity</TableHead>
                   <TableHead className="min-w-[150px]">Billing Unit</TableHead>
+                  <TableHead className="min-w-[120px]">Charge Type</TableHead>
                   <TableHead className="min-w-[150px]">Unit Price</TableHead>
                   <TableHead className="min-w-[80px]">ITBIS</TableHead>
                   <TableHead className="min-w-[120px] text-right">Line Total</TableHead>
@@ -239,6 +246,27 @@ export function ContractLinesEditor({ clientId, lines, onChange, readOnly = fals
                                 {unit.name}
                               </SelectItem>
                             ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {readOnly ? (
+                        <Badge variant={line.chargeType === "RECURRING" ? "secondary" : "outline"} className="text-xs">
+                          {line.chargeType || "RECURRING"}
+                        </Badge>
+                      ) : (
+                        <Select
+                          value={line.chargeType || "RECURRING"}
+                          onValueChange={(value) => updateLine(line.id, "chargeType", value)}
+                        >
+                          <SelectTrigger className="w-[120px]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="RECURRING">Recurring</SelectItem>
+                            <SelectItem value="ONE_TIME">One-Time</SelectItem>
+                            <SelectItem value="SETUP">Setup Fee</SelectItem>
                           </SelectContent>
                         </Select>
                       )}

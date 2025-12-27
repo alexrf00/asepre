@@ -92,10 +92,10 @@ export function hasPermission(user: User | null, permission: string): boolean {
   if (!user) return false
 
   // SUPERADMIN has all permissions
-  if (user.role?.name === "SUPERADMIN") return true
+  if (user.roles?.includes("SUPERADMIN")) return true
 
   // ADMINISTRADOR_GENERAL has specific permissions
-  if (user.role?.name === "ADMINISTRADOR_GENERAL") {
+  if (user.roles?.includes("ADMINISTRADOR_GENERAL")) {
     if (ADMIN_GENERAL_PERMISSIONS.includes(permission)) return true
   }
 
@@ -110,7 +110,7 @@ export function hasAnyPermission(user: User | null, permissions: string[]): bool
   if (!user) return false
 
   // SUPERADMIN has all permissions
-  if (user.role?.name === "SUPERADMIN") return true
+  if (user.roles?.includes("SUPERADMIN")) return true
 
   // Check if user has any of the permissions
   return permissions.some((permission) => hasPermission(user, permission))
@@ -123,7 +123,7 @@ export function hasAllPermissions(user: User | null, permissions: string[]): boo
   if (!user) return false
 
   // SUPERADMIN has all permissions
-  if (user.role?.name === "SUPERADMIN") return true
+  if (user.roles?.includes("SUPERADMIN")) return true
 
   return permissions.every((permission) => hasPermission(user, permission))
 }
@@ -132,21 +132,21 @@ export function hasAllPermissions(user: User | null, permissions: string[]): boo
  * Check if user is a superadmin
  */
 export function isSuperAdmin(user: User | null): boolean {
-  return user?.role?.name === "SUPERADMIN"
+  return user?.roles?.includes("SUPERADMIN") ?? false
 }
 
 /**
  * Check if user is an administrador general
  */
 export function isAdminGeneral(user: User | null): boolean {
-  return user?.role?.name === "ADMINISTRADOR_GENERAL"
+  return user?.roles?.includes("ADMINISTRADOR_GENERAL") ?? false
 }
 
 /**
  * Check if user is a viewer
  */
 export function isViewer(user: User | null): boolean {
-  return user?.role?.name === "VIEWER"
+  return user?.roles?.includes("VIEWER") ?? false
 }
 
 /**
@@ -185,8 +185,9 @@ export function getRoleDisplayName(roleName: string): string {
  * Check if user's role is higher or equal in hierarchy
  */
 export function hasRoleLevel(user: User | null, requiredRole: string): boolean {
-  if (!user?.role?.name) return false
-  const userLevel = ROLE_HIERARCHY[user.role.name] ?? 999
+  if (!user?.roles?.length) return false
+  // Get the highest role (lowest number in hierarchy)
+  const userLevel = Math.min(...user.roles.map((r) => ROLE_HIERARCHY[r] ?? 999))
   const requiredLevel = ROLE_HIERARCHY[requiredRole] ?? 0
   return userLevel <= requiredLevel
 }
@@ -196,7 +197,7 @@ export function hasRoleLevel(user: User | null, requiredRole: string): boolean {
  */
 export function hasRole(user: User | null, role: string): boolean {
   if (!user) return false
-  return user.roles?.includes(role) || user.role?.name === role
+  return user.roles?.includes(role) ?? false
 }
 
 /**
@@ -211,9 +212,8 @@ export function hasAnyRole(user: User | null, roles: string[]): boolean {
  * Check if user has higher or equal role in hierarchy
  */
 export function hasHigherOrEqualRole(user: User | null, role: string): boolean {
-  if (!user) return false
-  const userRoles = user.roles || (user.role?.name ? [user.role.name] : [])
-  const userHighestRole = Math.min(...userRoles.map((r) => ROLE_HIERARCHY[r] ?? 999))
+  if (!user?.roles?.length) return false
+  const userHighestRole = Math.min(...user.roles.map((r) => ROLE_HIERARCHY[r] ?? 999))
   const targetLevel = ROLE_HIERARCHY[role] ?? 999
   return userHighestRole <= targetLevel
 }

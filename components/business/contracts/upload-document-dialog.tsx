@@ -31,7 +31,7 @@ const ACCEPTED_FILE_TYPES = ["application/pdf"]
 const uploadFormSchema = z.object({
   documentType: z.enum(["EXECUTED", "AMENDMENT", "ADDENDUM", "ANNEX"]),
   notes: z.string().optional(),
-  makeCurrent: z.boolean().default(true),
+  makeCurrent: z.boolean(),
 })
 
 type UploadFormData = z.infer<typeof uploadFormSchema>
